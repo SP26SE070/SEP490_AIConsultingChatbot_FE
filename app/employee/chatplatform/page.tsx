@@ -12,6 +12,7 @@ import { chat, chatbotHealth, getConversationHistory, rateMessage } from "@/lib/
 import { isRatingMessageId, resolveServerMessageId } from "@/lib/chatMessageId";
 import { mapServerRatingToUi } from "@/lib/chatRating";
 import type { ChatMessageResponse } from "@/types/chatbot";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 
 export default function ChatPlatformPage() {
   const router = useRouter();
@@ -387,7 +388,7 @@ export default function ChatPlatformPage() {
                   className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 disabled:opacity-50"
                 >
                   {isLoading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <ChatbotSpinner size="sm" tone="inverse" />
                   ) : (
                     <Send className="h-4 w-4" />
                   )}

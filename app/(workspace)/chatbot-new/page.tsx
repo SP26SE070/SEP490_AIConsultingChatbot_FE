@@ -6,6 +6,7 @@ import { ChatView } from "@/components/chat/ChatView";
 import { SearchView } from "@/components/chat/SearchView";
 import { ChatbotAnalyticsView } from "@/components/chat/ChatbotAnalyticsView";
 import { ChatbotNewHeader } from "@/components/chat/ChatbotNewHeader";
+import { ChatbotEntryLoading } from "@/components/chat/ChatbotEntryLoading";
 import { getCurrentUserPermissions, getProfile } from "@/lib/api/profile";
 import { getAccessToken, getStoredUser, tryRefreshAuth } from "@/lib/auth-store";
 import { useWorkspaceStore } from "@/lib/workspace-store";
@@ -208,21 +209,27 @@ export default function ChatbotNewPage() {
       <ChatbotNewHeader onSmartSearch={() => goToSearch()} />
 
       <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
-        {activeView === "chat" && (
-          <ChatView
-            isHistoryOpen={isChatHistoryOpen}
-            onToggleHistory={toggleChatHistory}
-            onNavigateToSearch={(query) => goToSearch(query)}
-          />
+        {!permissionsHydrated ? (
+          <ChatbotEntryLoading variant="embedded" />
+        ) : (
+          <>
+            {activeView === "chat" && (
+              <ChatView
+                isHistoryOpen={isChatHistoryOpen}
+                onToggleHistory={toggleChatHistory}
+                onNavigateToSearch={(query) => goToSearch(query)}
+              />
+            )}
+            {activeView === "search" && canViewDocuments && (
+              <SearchView
+                key={`${searchNavKey}-${searchQuery}`}
+                initialQuery={searchQuery}
+                permissionTabs={documentPermissionTabs}
+              />
+            )}
+            {activeView === "analytics" && canViewAnalytics && <ChatbotAnalyticsView />}
+          </>
         )}
-        {activeView === "search" && canViewDocuments && (
-          <SearchView
-            key={`${searchNavKey}-${searchQuery}`}
-            initialQuery={searchQuery}
-            permissionTabs={documentPermissionTabs}
-          />
-        )}
-        {activeView === "analytics" && canViewAnalytics && <ChatbotAnalyticsView />}
       </div>
     </>
   );

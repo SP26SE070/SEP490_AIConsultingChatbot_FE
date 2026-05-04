@@ -1,6 +1,7 @@
 "use client";
 
-import { Zap, Calendar, Layers, BarChart3, Loader2 } from "lucide-react";
+import { Zap, Calendar, Layers, BarChart3 } from "lucide-react";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 import { ErrorNotice } from "@/components/ui";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -30,7 +31,7 @@ export function AIMetrics({
             key={i}
             className="flex min-h-[120px] items-center justify-center rounded-3xl bg-white p-5 shadow-lg shadow-green-100/60 dark:bg-zinc-950 dark:shadow-black/40"
           >
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-500/60" />
+            <ChatbotSpinner size="lg" />
           </div>
         ))}
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ChatbotEntryLoading } from "@/components/chat/ChatbotEntryLoading";
 
 export default function ChatbotPage() {
   const router = useRouter();
@@ -9,5 +10,5 @@ export default function ChatbotPage() {
     router.replace("/chatbot-new");
   }, [router]);
 
-  return null;
+  return <ChatbotEntryLoading variant="fullscreen" />;
 }

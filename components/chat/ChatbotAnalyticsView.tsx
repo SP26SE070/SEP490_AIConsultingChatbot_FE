@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
+import { ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
 import { AIUsageChart } from "@/components/tenant-admin/AIUsageChart";
 import { AIMetrics } from "@/components/tenant-admin/AIMetrics";
 import { DocumentEmbeddingOverview } from "@/components/tenant-admin/DocumentEmbeddingOverview";
@@ -17,6 +17,7 @@ import {
 import { tryRefreshAuth } from "@/lib/auth-store";
 import { apiErrorLooksForbidden, parseApiErrorMessage } from "@/lib/api/parseApiError";
 import { useLivePolling } from "@/lib/hooks/useLivePolling";
+import { ChatbotEntryLoading, ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 
 export function ChatbotAnalyticsView() {
   const { language } = useLanguageStore();
@@ -117,7 +118,7 @@ export function ChatbotAnalyticsView() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-50"
                 >
                   {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    <ChatbotSpinner size="sm" tone="inverse" aria-hidden />
                   ) : (
                     <RefreshCw className="h-4 w-4" aria-hidden />
                   )}
@@ -125,7 +126,7 @@ export function ChatbotAnalyticsView() {
                 </button>
                 {syncing ? (
                   <span className="inline-flex items-center justify-center gap-1.5 text-xs text-red-200/90">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    <ChatbotSpinner size="xs" tone="inverse" aria-hidden />
                     {t.analyticsSyncing}
                   </span>
                 ) : null}
@@ -134,11 +135,19 @@ export function ChatbotAnalyticsView() {
           </div>
         ) : null}
 
-        {!pageError ? (
+        {!pageError && loading ? (
+          <ChatbotEntryLoading
+            variant="panel"
+            title={t.aiAnalytics}
+            subtitle={t.loadingData}
+            className="rounded-2xl border border-zinc-200/80 bg-white/50 dark:border-zinc-800/80 dark:bg-zinc-950/40"
+          />
+        ) : null}
+        {!pageError && !loading ? (
           <>
-            <AIMetrics data={llm} loading={loading} error={null} />
-            <AIUsageChart data={llm} loading={loading} error={null} />
-            <DocumentEmbeddingOverview data={docs} loading={loading} error={null} />
+            <AIMetrics data={llm} loading={false} error={null} />
+            <AIUsageChart data={llm} loading={false} error={null} />
+            <DocumentEmbeddingOverview data={docs} loading={false} error={null} />
           </>
         ) : null}
       </div>

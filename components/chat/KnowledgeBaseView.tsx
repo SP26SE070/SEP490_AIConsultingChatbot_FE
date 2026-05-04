@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Upload, FileText, Search, Download, Trash2, Calendar, History, RefreshCw, X, Loader2 } from "lucide-react";
+import { Upload, FileText, Search, Download, Trash2, Calendar, History, RefreshCw, X } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { 
   listDocuments, 
@@ -17,6 +17,7 @@ import type { DocumentResponse, DocumentVersionResponse, DocumentCategoryRespons
 import { getTenantActiveDepartments, getTenantRoles, type DepartmentResponse, type RoleResponse } from "@/lib/api/tenant-admin";
 import { listCategoriesFlat } from "@/lib/api/categories";
 import { listTagsActive } from "@/lib/api/tags";
+import { ChatbotEntryLoading, ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 
 export function KnowledgeBaseView() {
   const { language } = useLanguageStore();
@@ -242,10 +243,12 @@ export function KnowledgeBaseView() {
       <div className="scrollbar-chat-hidden flex-1 overflow-y-auto scroll-smooth px-8 py-6">
         <div className="mx-auto max-w-6xl">
           {loading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="text-zinc-600 dark:text-zinc-400">
-                {language === "en" ? "Loading..." : "Đang tải..."}
-              </div>
+            <div className="flex min-h-[16rem] items-center justify-center py-8">
+              <ChatbotEntryLoading
+                variant="panel"
+                title={language === "en" ? "Loading documents" : "Đang tải tài liệu"}
+                subtitle={language === "en" ? "Fetching your library…" : "Đang lấy thư viện tài liệu…"}
+              />
             </div>
           ) : (
             <>
@@ -297,7 +300,7 @@ export function KnowledgeBaseView() {
                         title={language === "en" ? "Download" : "Tải xuống"}
                       >
                         {downloadingId === doc.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <ChatbotSpinner size="xs" tone="inverse" />
                         ) : (
                           <Download className="h-3 w-3" />
                         )}

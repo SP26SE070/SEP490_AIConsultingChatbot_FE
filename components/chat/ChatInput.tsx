@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import { useLanguageStore } from "@/lib/language-store";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 
 interface ChatInputProps {
   value: string;
@@ -46,7 +47,7 @@ export function ChatInput({
             className="flex h-11 w-11 shrink-0 items-center justify-center self-stretch rounded-lg bg-green-500 text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <ChatbotSpinner size="sm" tone="inverse" />
             ) : (
               <ArrowRightIcon className="h-5 w-5" />
             )}

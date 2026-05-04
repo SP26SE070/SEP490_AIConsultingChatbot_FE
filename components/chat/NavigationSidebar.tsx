@@ -22,6 +22,7 @@ import {
 } from "@/lib/auth-store";
 import { logout } from "@/lib/api/auth";
 import { getProfile } from "@/lib/api/profile";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 
 export type ChatbotNavView = "chat" | "search" | "analytics";
 
@@ -267,7 +268,11 @@ export function NavigationSidebar({
                       : "Onboarding ch\u01b0a c\u1ea5u h\u00ecnh"
               }
             >
-              <ClipboardCheck className="h-5 w-5" />
+              {onboardingLoading ? (
+                <ChatbotSpinner size="xs" />
+              ) : (
+                <ClipboardCheck className="h-5 w-5" />
+              )}
               {!onboardingLoading && onboardingHasIncomplete ? (
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-500" />
               ) : null}

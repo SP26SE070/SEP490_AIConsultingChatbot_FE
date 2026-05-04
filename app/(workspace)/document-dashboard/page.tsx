@@ -8,7 +8,7 @@ import { DocumentsTab } from "@/components/tenant-admin/DocumentsTab";
 import { DocumentUploadCard } from "@/components/tenant-admin/DocumentUploadCard";
 import { listCategoriesFlat } from "@/lib/api/categories";
 import { listTagsActive } from "@/lib/api/tags";
-import { uploadDocument, listAccessScopeDepartments, listAccessScopeRoles, type UploadDocumentParams } from "@/lib/api/documents";
+import { uploadDocument, uploadNewVersion, listDocuments, listAccessScopeDepartments, listAccessScopeRoles, type UploadDocumentParams } from "@/lib/api/documents";
 import { getStoredUser, tryRefreshAuth } from "@/lib/auth-store";
 import { getCurrentUserPermissions, getProfile } from "@/lib/api/profile";
 import { useLanguageStore } from "@/lib/language-store";
@@ -195,6 +195,22 @@ export default function DocumentDashboardPage() {
     router.replace("/chatbot-new");
   }, [canReadDocuments, hydrated, router]);
 
+  const buildDuplicateUploadError = (
+    existingDocumentId: string,
+    existingDocumentTitle: string,
+    message: string
+  ): Error & { code: string; existingDocumentId: string; existingDocumentTitle: string } => {
+    const err = new Error(message) as Error & {
+      code: string;
+      existingDocumentId: string;
+      existingDocumentTitle: string;
+    };
+    err.code = "DUPLICATE_DOCUMENT";
+    err.existingDocumentId = existingDocumentId;
+    err.existingDocumentTitle = existingDocumentTitle;
+    return err;
+  };
+
   const handleUpload = async (data: {
     file: File;
     categoryId?: string;
@@ -216,6 +232,50 @@ export default function DocumentDashboardPage() {
         accessibleRoles: data.roleIds.length ? data.roleIds : null,
       };
       await uploadDocument(params);
+      router.replace("/document-dashboard");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : language === "en" ? "Upload failed" : "Tải lên thất bại";
+      const normalized = message.toLowerCase();
+      const isDuplicate =
+        normalized.includes("already exists") ||
+        normalized.includes("duplicate") ||
+        normalized.includes("đã tồn tại") ||
+        normalized.includes("trùng");
+      if (isDuplicate) {
+        const docs = await listDocuments().catch(() => []);
+        const matched = docs.find((doc) => {
+          const title = (doc.documentTitle ?? "").trim().toLowerCase();
+          const original = (doc.originalFileName ?? "").trim().toLowerCase();
+          const fileName = data.file.name.trim().toLowerCase();
+          return fileName.length > 0 && (title === fileName || original === fileName);
+        });
+        if (matched) {
+          throw buildDuplicateUploadError(
+            matched.id,
+            matched.documentTitle || matched.originalFileName,
+            language === "en"
+              ? "This file already exists. You can upload it as a new version."
+              : "Tệp đã tồn tại. Bạn có thể tải lên thành phiên bản mới."
+          );
+        }
+      }
+      throw error instanceof Error ? error : new Error(message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUploadNewVersionFromDuplicate = async (data: {
+    documentId: string;
+    file: File;
+  }) => {
+    setUploading(true);
+    try {
+      await uploadNewVersion({
+        documentId: data.documentId,
+        file: data.file,
+      });
       router.replace("/document-dashboard");
     } finally {
       setUploading(false);
@@ -284,6 +344,7 @@ export default function DocumentDashboardPage() {
                   roles={roles}
                   uploading={uploading}
                   onUpload={handleUpload}
+                  onUploadNewVersion={handleUploadNewVersionFromDuplicate}
                 />
               )
             ) : null

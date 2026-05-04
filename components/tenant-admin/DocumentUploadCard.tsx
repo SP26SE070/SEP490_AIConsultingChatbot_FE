@@ -22,7 +22,17 @@ interface DocumentUploadCardProps {
     departmentIds: number[];
     roleIds: number[];
   }) => Promise<void>;
+  onUploadNewVersion: (data: {
+    documentId: string;
+    file: File;
+  }) => Promise<void>;
 }
+
+type DuplicateUploadError = Error & {
+  code?: string;
+  existingDocumentId?: string;
+  existingDocumentTitle?: string;
+};
 
 function getVisibilityLabels(language: "vi" | "en"): Record<DocumentVisibility, string> {
   if (language === "en") {
@@ -49,6 +59,7 @@ export function DocumentUploadCard({
   roles,
   uploading,
   onUpload,
+  onUploadNewVersion,
 }: DocumentUploadCardProps) {
   const { language } = useLanguageStore();
   const t = translations[language];
@@ -66,6 +77,10 @@ export function DocumentUploadCard({
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    existingDocumentId: string;
+    existingDocumentTitle: string;
+  } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +108,7 @@ export function DocumentUploadCard({
     if (files && files[0]) {
       setSelectedFile(files[0]);
       setError(null);
+      setDuplicateInfo(null);
     }
   };
 
@@ -131,6 +147,7 @@ export function DocumentUploadCard({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setDuplicateInfo(null);
     if (!selectedFile) {
       setError(isEn ? "Please select a file first." : "Vui lòng chọn tệp trước.");
       return;
@@ -216,7 +233,44 @@ export function DocumentUploadCard({
         fileInputRef.current.value = "";
       }
     } catch (e) {
+      const duplicateError = e as DuplicateUploadError;
+      if (
+        duplicateError?.code === "DUPLICATE_DOCUMENT" &&
+        typeof duplicateError.existingDocumentId === "string" &&
+        duplicateError.existingDocumentId.length > 0
+      ) {
+        setDuplicateInfo({
+          existingDocumentId: duplicateError.existingDocumentId,
+          existingDocumentTitle:
+            duplicateError.existingDocumentTitle?.trim() || selectedFile.name,
+        });
+        return;
+      }
       setError(e instanceof Error ? e.message : isEn ? "Upload failed." : "Tải lên thất bại.");
+    }
+  };
+
+  const handleConfirmUploadNewVersion = async () => {
+    if (!selectedFile || !duplicateInfo) return;
+    setError(null);
+    try {
+      await onUploadNewVersion({
+        documentId: duplicateInfo.existingDocumentId,
+        file: selectedFile,
+      });
+      setDuplicateInfo(null);
+      setSelectedFile(null);
+      setCategoryId("");
+      setSelectedTagIds([]);
+      setDescription("");
+      setVisibility("COMPANY_WIDE");
+      setSelectedDepartmentIds([]);
+      setSelectedRoleIds([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : isEn ? "Update failed." : "Cập nhật thất bại.");
     }
   };
 
@@ -226,6 +280,51 @@ export function DocumentUploadCard({
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-300">
             {error}
+          </div>
+        )}
+        {duplicateInfo && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <p className="font-semibold">
+              {isEn ? "This file already exists." : "Tệp này đã tồn tại."}
+            </p>
+            <p className="mt-1">
+              {isEn ? "Document:" : "Tài liệu:"} <span className="font-medium">{duplicateInfo.existingDocumentTitle}</span>
+            </p>
+            <p className="mt-2 text-xs">
+              {isEn ? "Selected access scope for this upload:" : "Phạm vi truy cập đã chọn cho lần tải này:"}
+            </p>
+            <p className="mt-1 text-xs font-medium">
+              {visibilityLabels[visibility]}
+            </p>
+            {(visibility === "SPECIFIC_DEPARTMENTS" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES") && (
+              <p className="mt-1 text-xs">
+                {isEn ? "Departments:" : "Phòng ban:"}{" "}
+                {selectedDepartmentIds.length}
+              </p>
+            )}
+            {(visibility === "SPECIFIC_ROLES" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES") && (
+              <p className="mt-1 text-xs">
+                {isEn ? "Roles:" : "Vai trò:"}{" "}
+                {selectedRoleIds.length}
+              </p>
+            )}
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={handleConfirmUploadNewVersion}
+                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-50"
+              >
+                {isEn ? "Upload as new version" : "Tải lên thành phiên bản mới"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuplicateInfo(null)}
+                className="rounded-lg border border-amber-400 px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-amber-100 dark:border-amber-600 dark:text-amber-200 dark:hover:bg-amber-900/40"
+              >
+                {isEn ? "Cancel" : "Hủy"}
+              </button>
+            </div>
           </div>
         )}
         {/* Upload Section */}

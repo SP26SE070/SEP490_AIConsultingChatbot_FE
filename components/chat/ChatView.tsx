@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { ChatHistorySidebarNew } from "./ChatHistorySidebarNew";
+import { ChatbotAssistantTyping, ChatbotSpinner } from "./ChatbotEntryLoading";
 import { getStoredUser } from "@/lib/auth-store";
 import { getProfile } from "@/lib/api/profile";
 import { chat, ChatApiError, getConversationHistory, rateMessage } from "@/lib/api/chatbot";
@@ -554,29 +555,7 @@ export function ChatView({
                       </div>
                     </div>
                   ))}
-                  {isLoading ? (
-                    <div className="flex gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-600/25 ring-1 ring-white/20">
-                        <Sparkles className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                          {isEn ? "AI Assistant" : "Trợ lý AI"}
-                        </div>
-                        <div className="inline-flex min-w-60 max-w-md flex-col gap-3 rounded-2xl border border-zinc-200/90 bg-gradient-to-br from-zinc-50 to-white px-4 py-3.5 shadow-sm dark:border-zinc-700/60 dark:from-zinc-900/90 dark:to-zinc-950">
-                          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                            {isEn ? "Generating answer…" : "Đang tạo câu trả lời…"}
-                          </div>
-                          <div className="space-y-2">
-                            <div className="h-2.5 w-full animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-                            <div className="h-2.5 w-[92%] animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-                            <div className="h-2.5 w-[66%] animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
+                  {isLoading ? <ChatbotAssistantTyping /> : null}
                 </div>
               )}
 
@@ -636,7 +615,11 @@ export function ChatView({
                         disabled={!input.trim() || isLoading || input.length > INPUT_CHAR_LIMIT}
                         className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 text-white shadow-md shadow-emerald-600/25 transition hover:from-emerald-400 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
                       >
-                        <Send className="h-5 w-5" />
+                        {isLoading ? (
+                          <ChatbotSpinner size="sm" tone="inverse" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
                       </button>
                     </div>
                   </div>

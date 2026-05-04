@@ -3,7 +3,8 @@
 import "@/lib/chartjs-register";
 import { useMemo } from "react";
 import { Chart } from "react-chartjs-2";
-import { MessageSquare, TrendingUp, Loader2 } from "lucide-react";
+import { MessageSquare, TrendingUp } from "lucide-react";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 import { ErrorNotice } from "@/components/ui";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -188,7 +189,7 @@ export function AIUsageChart({
   if (loading) {
     return (
       <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-zinc-800/60 bg-gradient-to-br from-zinc-950 via-violet-950/15 to-zinc-900 p-8 shadow-xl shadow-black/30 dark:border-zinc-800/60">
-        <Loader2 className="h-10 w-10 animate-spin text-violet-400/80" />
+        <ChatbotSpinner size="lg" />
       </div>
     );
   }
