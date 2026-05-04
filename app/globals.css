@@ -210,6 +210,47 @@ footer {
   height: 0;
 }
 
+/* Chat assistant: bullet đa tầng — marker khác nhau theo cấp, padding vừa đủ trên màn hẹp */
+.assistant-rich-text .chat-nested-ul {
+  list-style-position: outside;
+  margin: 0.35em 0 0.5em;
+  padding-left: 1rem;
+}
+.assistant-rich-text .chat-nested-ul > li {
+  margin: 0.2em 0;
+  padding-left: 0.15em;
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-0 {
+  list-style-type: disc;
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-0 > li::marker {
+  color: rgb(16 185 129);
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-1 {
+  list-style-type: circle;
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-1 > li::marker {
+  color: rgb(59 130 246);
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-2 {
+  list-style-type: square;
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-2 > li::marker {
+  color: rgb(139 92 246);
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-3,
+.assistant-rich-text .chat-nested-ul.chat-depth-4,
+.assistant-rich-text .chat-nested-ul.chat-depth-5 {
+  list-style-type: "- ";
+  padding-left: 0.85rem;
+}
+.assistant-rich-text .chat-nested-ul.chat-depth-3 > li::marker,
+.assistant-rich-text .chat-nested-ul.chat-depth-4 > li::marker,
+.assistant-rich-text .chat-nested-ul.chat-depth-5 > li::marker {
+  color: rgb(113 113 122);
+  font-weight: 500;
+}
+
 /* Tùy chọn: thanh mảnh màu emerald, hiện khi hover vùng cuộn */
 .scrollbar-chat-thin {
   scrollbar-width: thin;

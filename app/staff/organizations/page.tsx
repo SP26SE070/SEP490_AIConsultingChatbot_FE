@@ -33,6 +33,7 @@ import {
   activateTenant,
   rejectTenant,
   deleteTenant,
+  hardDeleteTenant,
   type Tenant,
   type TenantStatus,
 } from "@/lib/api/staff";
@@ -84,7 +85,10 @@ export default function StaffOrganizationsPage() {
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTenantId, setDeleteTenantId] = useState<string | null>(null);
+  const [hardDeleteModalOpen, setHardDeleteModalOpen] = useState(false);
+  const [hardDeleteTenantId, setHardDeleteTenantId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const isLocalDev = typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
   const ensureStaffAccessToken = useCallback(async (): Promise<boolean> => {
     if (getAccessToken()) return true;
@@ -269,10 +273,28 @@ export default function StaffOrganizationsPage() {
     }
   };
 
-  const filteredTenants =
+  const handleHardDelete = async () => {
+    if (!hardDeleteTenantId) return;
+    try {
+      setActionLoading(`hard:${hardDeleteTenantId}`);
+      setError(null);
+      await hardDeleteTenant(hardDeleteTenantId);
+      await loadTenants();
+      requestStaffPortalStatsRefresh();
+      setHardDeleteModalOpen(false);
+      setHardDeleteTenantId(null);
+      setSuccessMessage(language === "en" ? "Tenant permanently deleted (dev)." : "Đã xóa cứng tenant (dev).");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, language === "en" ? "Cannot hard delete tenant" : "Không thể xóa cứng tenant"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const displayedTenants =
     statusFilter === "ALL"
       ? tenants
-      : tenants.filter((t) => t.status === statusFilter);
+      : tenants.filter((tenant) => tenant.status === statusFilter);
 
   const actionBtnClass =
     "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-medium transition disabled:opacity-50";
@@ -317,10 +339,6 @@ export default function StaffOrganizationsPage() {
             <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
             <span className="text-sm text-zinc-500">{t.loadingList}</span>
           </div>
-        ) : filteredTenants.length === 0 ? (
-          <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-            {t.noTenants}
-          </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
             <div className="border-b border-zinc-200/80 bg-zinc-50/90 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -333,7 +351,14 @@ export default function StaffOrganizationsPage() {
                 </div>
                 <AnimatedSegmentedControl
                   value={statusFilter}
-                  onChange={setStatusFilter}
+                  onChange={(value) =>
+                    setStatusFilter((prev) => {
+                      const next = value as TenantStatus | "ALL";
+                      if (next === "ALL") return "ALL";
+                      // Toggle selected status chip: click again to clear sort.
+                      return prev === next ? "ALL" : next;
+                    })
+                  }
                   layoutId="staff-organizations-status-pill"
                   size="sm"
                   className="rounded-full bg-zinc-100/80 p-1 dark:bg-zinc-800/80"
@@ -347,133 +372,157 @@ export default function StaffOrganizationsPage() {
                 />
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold text-zinc-700 dark:text-zinc-300">{t.nameEmail}</th>
-                    <th className="px-6 py-3 font-semibold text-zinc-700 dark:text-zinc-300">{t.status}</th>
-                    <th className="px-6 py-3 text-right font-semibold text-zinc-700 dark:text-zinc-300">{t.actions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {filteredTenants.map((tenant) => (
-                    <tr
-                      key={tenant.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-zinc-900 dark:text-zinc-50">{tenant.name}</div>
-                        <div className="text-xs text-zinc-500">{tenant.contactEmail}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor[tenant.status]}`}
-                        >
-                          {statusLabel[tenant.status][language]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openDetailModal(tenant.id)}
-                            className={`${actionBtnClass} bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700`}
-                            title={t.viewDetail}
+            {displayedTenants.length === 0 ? (
+              <div className="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                {statusFilter === "ALL"
+                  ? t.noTenants
+                  : language === "en"
+                    ? `No organizations with status ${statusLabel[statusFilter][language]}.`
+                    : `Không có tổ chức ở trạng thái ${statusLabel[statusFilter][language]}.`}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50">
+                    <tr>
+                      <th className="px-6 py-3 font-semibold text-zinc-700 dark:text-zinc-300">{t.nameEmail}</th>
+                      <th className="px-6 py-3 font-semibold text-zinc-700 dark:text-zinc-300">{t.status}</th>
+                      <th className="px-6 py-3 text-right font-semibold text-zinc-700 dark:text-zinc-300">{t.actions}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {displayedTenants.map((tenant) => (
+                      <tr
+                        key={tenant.id}
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-zinc-900 dark:text-zinc-50">{tenant.name}</div>
+                          <div className="text-xs text-zinc-500">{tenant.contactEmail}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor[tenant.status]}`}
                           >
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>{language === "en" ? "Detail" : "Chi tiết"}</span>
-                          </button>
+                            {statusLabel[tenant.status][language]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openDetailModal(tenant.id)}
+                              className={`${actionBtnClass} bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700`}
+                              title={t.viewDetail}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              <span>{language === "en" ? "Detail" : "Chi tiết"}</span>
+                            </button>
 
-                          {tenant.status === "PENDING" && (
-                            <>
+                            {tenant.status === "PENDING" && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === tenant.id}
+                                  onClick={() => handleApprove(tenant.id)}
+                                  className={`${actionBtnClass} bg-emerald-500/90 text-white hover:bg-emerald-600`}
+                                >
+                                  {actionLoading === tenant.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                  )}
+                                  <span>{t.approve}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === tenant.id}
+                                  onClick={() => openRejectModal(tenant.id)}
+                                  className={`${actionBtnClass} bg-red-500/90 text-white hover:bg-red-600`}
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  <span>{t.reject}</span>
+                                </button>
+                              </>
+                            )}
+                            {tenant.status === "ACTIVE" && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === `resend:${tenant.id}`}
+                                  onClick={() => handleResendCredentials(tenant.id)}
+                                  className={`${actionBtnClass} bg-sky-500/90 text-white hover:bg-sky-600`}
+                                  title={language === "en" ? "Resend login credentials email" : "Gửi lại email thông tin đăng nhập"}
+                                >
+                                  {actionLoading === `resend:${tenant.id}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Send className="h-3.5 w-3.5" />
+                                  )}
+                                  <span>{language === "en" ? "Resend mail" : "Gửi lại mail"}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === tenant.id}
+                                  onClick={() => handleSuspend(tenant.id)}
+                                  className={`${actionBtnClass} bg-amber-500/90 text-white hover:bg-amber-600`}
+                                >
+                                  {actionLoading === tenant.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <PauseCircle className="h-3.5 w-3.5" />
+                                  )}
+                                  <span>{t.suspend}</span>
+                                </button>
+                              </>
+                            )}
+                            {tenant.status === "SUSPENDED" && (
                               <button
                                 type="button"
                                 disabled={actionLoading === tenant.id}
-                                onClick={() => handleApprove(tenant.id)}
+                                onClick={() => handleActivate(tenant.id)}
                                 className={`${actionBtnClass} bg-emerald-500/90 text-white hover:bg-emerald-600`}
                               >
                                 {actionLoading === tenant.id ? (
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
-                                  <Check className="h-3.5 w-3.5" />
+                                  <RotateCcw className="h-3.5 w-3.5" />
                                 )}
-                                <span>{t.approve}</span>
+                                <span>{t.reactivate}</span>
                               </button>
-                              <button
-                                type="button"
-                                disabled={actionLoading === tenant.id}
-                                onClick={() => openRejectModal(tenant.id)}
-                                className={`${actionBtnClass} bg-red-500/90 text-white hover:bg-red-600`}
-                              >
-                                <XCircle className="h-3.5 w-3.5" />
-                                <span>{t.reject}</span>
-                              </button>
-                            </>
-                          )}
-                          {tenant.status === "ACTIVE" && (
-                            <>
-                              <button
-                                type="button"
-                                disabled={actionLoading === `resend:${tenant.id}`}
-                                onClick={() => handleResendCredentials(tenant.id)}
-                                className={`${actionBtnClass} bg-sky-500/90 text-white hover:bg-sky-600`}
-                                title={language === "en" ? "Resend login credentials email" : "Gửi lại email thông tin đăng nhập"}
-                              >
-                                {actionLoading === `resend:${tenant.id}` ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Send className="h-3.5 w-3.5" />
-                                )}
-                                <span>{language === "en" ? "Resend mail" : "Gửi lại mail"}</span>
-                              </button>
-                              <button
-                                type="button"
-                                disabled={actionLoading === tenant.id}
-                                onClick={() => handleSuspend(tenant.id)}
-                                className={`${actionBtnClass} bg-amber-500/90 text-white hover:bg-amber-600`}
-                              >
-                                {actionLoading === tenant.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <PauseCircle className="h-3.5 w-3.5" />
-                                )}
-                                <span>{t.suspend}</span>
-                              </button>
-                            </>
-                          )}
-                          {tenant.status === "SUSPENDED" && (
+                            )}
+
                             <button
                               type="button"
-                              disabled={actionLoading === tenant.id}
-                              onClick={() => handleActivate(tenant.id)}
-                              className={`${actionBtnClass} bg-emerald-500/90 text-white hover:bg-emerald-600`}
+                              onClick={() => openDeleteModal(tenant.id)}
+                              className={`${actionBtnClass} bg-red-600 text-white hover:bg-red-700`}
+                              title={markDeleteCopy.actionTitle}
                             >
-                              {actionLoading === tenant.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <RotateCcw className="h-3.5 w-3.5" />
-                              )}
-                              <span>{t.reactivate}</span>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>{markDeleteCopy.action}</span>
                             </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => openDeleteModal(tenant.id)}
-                            className={`${actionBtnClass} bg-red-600 text-white hover:bg-red-700`}
-                            title={markDeleteCopy.actionTitle}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span>{markDeleteCopy.action}</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            {isLocalDev && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHardDeleteTenantId(tenant.id);
+                                  setHardDeleteModalOpen(true);
+                                }}
+                                className={`${actionBtnClass} bg-black text-white hover:bg-zinc-800`}
+                                title={language === "en" ? "Hard delete tenant (dev only)" : "Xóa cứng tenant (chỉ dev)"}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>{language === "en" ? "Hard delete" : "Xóa cứng"}</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -598,7 +647,7 @@ export default function StaffOrganizationsPage() {
             setDetailModalOpen(false);
             setSelectedTenant(null);
           }} />
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
+          <div className="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
             {/* Header with gradient */}
             <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-purple-500 to-violet-600 px-6 py-8">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
@@ -814,14 +863,22 @@ export default function StaffOrganizationsPage() {
                         </div>
                       </div>
                     )}
-                    {selectedTenant.reviewedBy && (
+                    {(selectedTenant.approvedByName || selectedTenant.rejectedByName || selectedTenant.reviewedByName) && (
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800">
                           <User className="h-4 w-4 text-zinc-400" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-zinc-400">{t.reviewer}</p>
-                          <p className="mt-0.5 text-sm font-medium text-white">{selectedTenant.reviewedBy}</p>
+                          <p className="text-xs font-medium text-zinc-400">
+                            {selectedTenant.status === "REJECTED"
+                              ? (language === "vi" ? "Người từ chối" : "Rejected by")
+                              : (language === "vi" ? "Người duyệt" : "Approved by")}
+                          </p>
+                          <p className="mt-0.5 text-sm font-medium text-white">
+                            {selectedTenant.status === "REJECTED"
+                              ? (selectedTenant.rejectedByName || selectedTenant.reviewedByName || selectedTenant.reviewedBy)
+                              : (selectedTenant.approvedByName || selectedTenant.reviewedByName || selectedTenant.reviewedBy)}
+                          </p>
                         </div>
                       </div>
                     )}
@@ -841,6 +898,42 @@ export default function StaffOrganizationsPage() {
                 className="w-full rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:bg-purple-600"
               >
                 {t.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hard Delete Modal (Dev only) */}
+      {hardDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-zinc-900">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
+              {language === "en" ? "Confirm hard delete (dev)" : "Xác nhận xóa cứng (dev)"}
+            </h3>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {language === "en"
+                ? "This will permanently remove tenant and related records from the database. This action cannot be undone."
+                : "Thao tác này sẽ xóa vĩnh viễn tenant và dữ liệu liên quan khỏi database. Không thể hoàn tác."}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setHardDeleteModalOpen(false);
+                  setHardDeleteTenantId(null);
+                }}
+                className="flex-1 rounded-xl bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleHardDelete}
+                disabled={actionLoading === `hard:${hardDeleteTenantId}`}
+                className="flex-1 rounded-xl bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+              >
+                {actionLoading === `hard:${hardDeleteTenantId}` ? t.processing : (language === "en" ? "Hard delete" : "Xóa cứng")}
               </button>
             </div>
           </div>

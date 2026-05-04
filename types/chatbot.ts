@@ -5,6 +5,8 @@ export interface ChatRequest {
   topK?: number | null;
   categoryId?: string | null;
   tagIds?: string[] | null;
+  /** Khi hỏi trong ngữ cảnh một tài liệu (BE kiểm tra quyền + lọc chunk theo doc). */
+  targetDocumentId?: string | null;
 }
 
 /** Source from RAG (one chunk) */
@@ -50,7 +52,9 @@ export interface ChatMessageResponse {
   messageId?: string;
   role: "USER" | "ASSISTANT";
   content: string;
-  sources: SourceDocument[];
+  /** `sources` from chat API; `sourceChunks` from persisted history API */
+  sources?: SourceDocument[] | null;
+  sourceChunks?: SourceDocument[] | null;
   rating: number | null;
   createdAt: string;
 }

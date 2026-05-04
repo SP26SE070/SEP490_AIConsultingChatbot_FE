@@ -24,6 +24,8 @@ export interface DocumentResponse {
   description?: string | null;
   tags: DocumentTagResponse[];
   visibility: DocumentVisibility;
+  /** 1–5: user level X thấy tài liệu khi minimumRoleLevel >= X */
+  minimumRoleLevel?: number | null;
   accessibleDepartments?: number[] | null;
   accessibleRoles?: number[] | null;
   embeddingStatus: string;
@@ -70,6 +72,7 @@ export interface DocumentCategoryResponse {
 /** Request: update document access */
 export interface UpdateDocumentAccessRequest {
   visibility: DocumentVisibility;
+  minimumRoleLevel: number;
   accessibleDepartments?: number[] | null;
   accessibleRoles?: number[] | null;
 }

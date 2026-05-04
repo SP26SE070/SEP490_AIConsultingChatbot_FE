@@ -80,6 +80,7 @@ export interface RoleResponse {
   id: number;
   name?: string;
   code?: string;
+  level?: number;
   description?: string;
   usersCount?: number;
   /** Optional permissions list (if BE returns in role detail). */
@@ -166,12 +167,14 @@ export function normalizeTenantRole(raw: unknown): RoleResponse {
   const o = raw as Record<string, unknown>;
   const idRaw = o.id ?? o.role_id ?? o.roleId;
   const id = Number(idRaw);
+  const level = Number(o.level);
   const permissions = parsePermissionsField(o.permissions);
 
   return {
     id: Number.isFinite(id) ? id : 0,
     name: typeof o.name === "string" ? o.name : undefined,
     code: typeof o.code === "string" ? o.code : undefined,
+    level: Number.isFinite(level) ? level : undefined,
     description: typeof o.description === "string" ? o.description : undefined,
     usersCount: firstNonNegativeInt(
       o.usersCount,
@@ -448,12 +451,14 @@ export async function getTenantAvailablePermissions(): Promise<{ code: string; n
 export interface CreateRoleRequest {
   code: string;
   name: string;
+  level: number;
   description?: string;
   permissions: string[];
 }
 
 export interface UpdateRoleRequest {
   name?: string;
+  level?: number;
   description?: string;
   permissions?: string[];
 }

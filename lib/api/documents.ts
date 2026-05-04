@@ -131,8 +131,8 @@ const FORCE_BINARY_EXTENSIONS = new Set([
   "7z",
 ]);
 
-/** Trích text thuần (text/plain) — không chuyển Office → PDF như preview mặc định */
-const PREVIEW_QUERY = "mode=preview&format=text";
+/** Preview mặc định theo renderer BE (ưu tiên giữ định dạng gốc/PDF, không ép text). */
+const PREVIEW_QUERY = "mode=preview";
 const PREVIEW_ACCEPT = "application/pdf, text/plain, text/html, application/json;q=0.9, */*;q=0.8";
 
 function withPreviewMode(url: string): string {
@@ -520,6 +520,8 @@ export interface UploadDocumentParams {
   categoryId?: string | null;
   tagIds?: string[] | null;
   description?: string | null;
+  /** 1–5, mặc định 4 */
+  minimumRoleLevel?: number;
   visibility?: "COMPANY_WIDE" | "SPECIFIC_DEPARTMENTS" | "SPECIFIC_ROLES" | "SPECIFIC_DEPARTMENTS_AND_ROLES";
   accessibleDepartments?: number[] | null;
   accessibleRoles?: number[] | null;
@@ -538,6 +540,7 @@ export async function uploadDocument(params: UploadDocumentParams): Promise<Docu
   if (params.accessibleRoles?.length) {
     params.accessibleRoles.forEach((r) => form.append("accessibleRoles", String(r)));
   }
+  form.append("minimumRoleLevel", String(params.minimumRoleLevel ?? 4));
   const res = await fetchWithAuth(`${DOCUMENTS_BASE}/upload`, {
     method: "POST",
     body: form,

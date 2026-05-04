@@ -40,6 +40,9 @@ export interface Tenant {
   requestedAt?: string;
   status: TenantStatus;
   reviewedBy?: string;
+  reviewedByName?: string;
+  approvedByName?: string;
+  rejectedByName?: string;
   reviewedAt?: string;
   rejectionReason?: string;
   subscriptionId?: string;
@@ -197,6 +200,15 @@ export async function deleteTenant(tenantId: string): Promise<{ message: string 
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || "Xóa thất bại");
+  return data;
+}
+
+export async function hardDeleteTenant(tenantId: string): Promise<{ message: string }> {
+  const res = await fetchWithAuth(`${STAFF_BASE}/tenants/${tenantId}/hard-delete`, {
+    method: "DELETE",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || "Xóa cứng thất bại");
   return data;
 }
 

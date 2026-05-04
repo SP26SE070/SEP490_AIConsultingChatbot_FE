@@ -30,6 +30,14 @@ type FilterMode = "all" | "custom" | "fixed";
 
 const TAB_EASE = [0.22, 1, 0.36, 1] as const;
 
+const ROLE_LEVEL_OPTIONS = [
+  { value: 1, label: "Level 1 (Executive)" },
+  { value: 2, label: "Level 2 (Management)" },
+  { value: 3, label: "Level 3 (Senior)" },
+  { value: 4, label: "Level 4 (Employee)" },
+  { value: 5, label: "Level 5 (Intern / External)" },
+];
+
 function isUnauthorizedError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   return /(unauthorized|missing or invalid token|\b401\b)/i.test(message);
@@ -283,6 +291,7 @@ export default function TenantAdminRolesPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t.roleLabel}</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t.codeLabel}</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Level</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t.usersCount}</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t.typeLabel}</th>
                       <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{t.thaoTac}</th>
@@ -291,7 +300,7 @@ export default function TenantAdminRolesPage() {
                   <tbody className="divide-y divide-zinc-100 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
                     {roles.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-sm text-zinc-500">
+                        <td colSpan={6} className="px-6 py-8 text-center text-sm text-zinc-500">
                           {t.noData}
                         </td>
                       </tr>
@@ -318,6 +327,9 @@ export default function TenantAdminRolesPage() {
                             </td>
                             <td className="px-4 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400 sm:px-6">
                               <div className="max-w-48 whitespace-normal wrap-break-word">{role.code ?? "—"}</div>
+                            </td>
+                            <td className="whitespace-nowrap px-4 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400 sm:px-6">
+                              {role.level ?? "—"}
                             </td>
                             <td className="whitespace-nowrap px-4 py-4 align-top text-sm text-zinc-600 dark:text-zinc-400 sm:px-6">{role.usersCount ?? 0}</td>
                             <td className="whitespace-nowrap px-4 py-4 align-top sm:px-6">
@@ -462,7 +474,7 @@ export default function TenantAdminRolesPage() {
             {/* CONTENT - Card Based Layout */}
             <div className="space-y-6 p-8">
               {/* Stats Cards Row */}
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
                 {/* Role Code Card */}
                 <div className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-linear-to-br from-white to-zinc-50 p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-900/50">
                   <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-emerald-500/5 blur-2xl" />
@@ -495,6 +507,24 @@ export default function TenantAdminRolesPage() {
                     </div>
                     <p className="text-lg font-bold text-zinc-900 dark:text-white">
                       {detail.usersCount ?? 0}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Level Card */}
+                <div className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-linear-to-br from-white to-zinc-50 p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-900/50">
+                  <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-indigo-500/5 blur-2xl" />
+                  <div className="relative">
+                    <div className="mb-2 flex items-center gap-2">
+                      <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M6 12h12M10 17h4" />
+                      </svg>
+                      <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        Level
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-zinc-900 dark:text-white">
+                      {detail.level ?? "—"}
                     </p>
                   </div>
                 </div>
@@ -640,7 +670,13 @@ function CreateRoleModal({
 }) {
   const { language } = useLanguageStore();
   const t = translations[language];
-  const [form, setForm] = useState<CreateRoleRequest>({ code: "", name: "", description: "", permissions: [] });
+  const [form, setForm] = useState<CreateRoleRequest>({
+    code: "",
+    name: "",
+    level: 4,
+    description: "",
+    permissions: [],
+  });
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -654,6 +690,7 @@ function CreateRoleModal({
       await createTenantRole({
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
+        level: form.level,
         description: form.description?.trim() || undefined,
         permissions: form.permissions,
       });
@@ -680,6 +717,20 @@ function CreateRoleModal({
           <div>
             <label className="block text-xs font-medium text-zinc-500">{t.roleLabel} *</label>
             <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="HR Manager" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-500">Level *</label>
+            <select
+              value={form.level}
+              onChange={(e) => setForm((p) => ({ ...p, level: Number(e.target.value) }))}
+              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+            >
+              {ROLE_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-zinc-500">{t.description}</label>
@@ -723,6 +774,7 @@ function EditRoleModal({
   const { language } = useLanguageStore();
   const t = translations[language];
   const [name, setName] = useState(role.name ?? "");
+  const [level, setLevel] = useState<number>(role.level ?? 4);
   const [description, setDescription] = useState(role.description ?? "");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role.permissions ?? []);
   const [permsLoading, setPermsLoading] = useState(true);
@@ -738,6 +790,7 @@ function EditRoleModal({
 
   useEffect(() => {
     setName(role.name ?? "");
+    setLevel(role.level ?? 4);
     setDescription(role.description ?? "");
   }, [role]);
 
@@ -774,6 +827,7 @@ function EditRoleModal({
     try {
       await updateTenantRole(role.id, {
         name: name.trim(),
+        level,
         description: description.trim() || undefined,
         permissions: selectedPermissions,
       });
@@ -804,6 +858,20 @@ function EditRoleModal({
           <div>
             <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Description" : "Mô tả"}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-500">Level</label>
+            <select
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
+              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+            >
+              {ROLE_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-zinc-500">

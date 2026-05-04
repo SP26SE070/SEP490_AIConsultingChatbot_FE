@@ -47,9 +47,10 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
   const body: Record<string, unknown> = {
     message: request.message,
     conversationId: request.conversationId ?? undefined,
-    topK: request.topK ?? 5,
+    topK: request.topK ?? 7,
     categoryId: request.categoryId ?? undefined,
     tagIds: request.tagIds ?? undefined,
+    targetDocumentId: request.targetDocumentId ?? undefined,
   };
   const res = await fetchWithAuth(`${CHATBOT_BASE}/chat`, {
     method: "POST",

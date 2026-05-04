@@ -336,6 +336,12 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
       reset: language === "en" ? "Reset" : "Đặt lại",
       applyFilters: language === "en" ? "Apply Filters" : "Áp dụng",
       searchAction: language === "en" ? "Search" : "Tìm",
+      chatAboutDocument:
+        language === "en" ? "Chat about this document" : "Hỏi chatbot về tài liệu này",
+      chatAboutDocumentHint:
+        language === "en"
+          ? "Opens chat scoped to this document (RAG only from this file)."
+          : "Mở chat chỉ dùng nội dung tài liệu này cho RAG.",
     }),
     [language, sharedTranslations]
   );
@@ -1143,6 +1149,19 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                   >
                     <History className="h-4 w-4 shrink-0 text-zinc-400" />
                     {t.versions}
+                  </button>
+                  <button
+                    type="button"
+                    title={t.chatAboutDocumentHint}
+                    onClick={() =>
+                      router.push(
+                        `/chatbot-new?doc=${encodeURIComponent(selected.id)}`
+                      )
+                    }
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-900 transition hover:border-violet-400 hover:bg-violet-100 dark:border-violet-700/70 dark:bg-violet-950/50 dark:text-violet-100 dark:hover:border-violet-500 dark:hover:bg-violet-900/40 sm:min-w-32"
+                  >
+                    <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+                    {t.chatAboutDocument}
                   </button>
                 </div>
 

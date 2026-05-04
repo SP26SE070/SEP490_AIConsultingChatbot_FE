@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import {
   Send,
   Paperclip,
@@ -53,16 +53,269 @@ interface Message {
   rating?: "helpful" | "not-helpful";
 }
 
+type MessageSource = NonNullable<Message["sources"]>[number];
+
+function toConfidencePercent(confidence?: number): number | undefined {
+  if (confidence == null) return undefined;
+  return Math.round(confidence <= 1 ? confidence * 100 : confidence);
+}
+
+function dedupeSources(sources?: Message["sources"]): MessageSource[] {
+  if (!sources || sources.length === 0) return [];
+  const grouped = new Map<string, MessageSource>();
+  for (const source of sources) {
+    const key = (source.documentId ?? source.documentName).toLowerCase().trim();
+    const existing = grouped.get(key);
+    if (!existing) {
+      grouped.set(key, source);
+      continue;
+    }
+    const currentPct = toConfidencePercent(source.confidence) ?? -1;
+    const existingPct = toConfidencePercent(existing.confidence) ?? -1;
+    if (currentPct > existingPct) {
+      grouped.set(key, source);
+    }
+  }
+  return [...grouped.values()];
+}
+
+function pickTopSource(sources?: Message["sources"]): MessageSource | null {
+  const deduped = dedupeSources(sources);
+  if (deduped.length === 0) return null;
+  return deduped.reduce((best, current) => {
+    const bestPct = toConfidencePercent(best.confidence) ?? -1;
+    const currentPct = toConfidencePercent(current.confidence) ?? -1;
+    return currentPct > bestPct ? current : best;
+  });
+}
+
+function mapApiSourcesToUi(
+  rawSources: unknown
+): Array<{ documentId?: string; documentName: string; confidence?: number }> {
+  if (!Array.isArray(rawSources)) return [];
+  return rawSources
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const src = item as Record<string, unknown>;
+      const documentId =
+        typeof src.documentId === "string"
+          ? src.documentId
+          : typeof src.document_id === "string"
+            ? src.document_id
+            : undefined;
+      const documentName =
+        typeof src.fileName === "string"
+          ? src.fileName
+          : typeof src.documentName === "string"
+            ? src.documentName
+            : typeof src.document_name === "string"
+              ? src.document_name
+              : "";
+      const confidenceRaw =
+        typeof src.relevanceScore === "number"
+          ? src.relevanceScore
+          : typeof src.similarityScore === "number"
+            ? src.similarityScore
+            : typeof src.similarity_score === "number"
+              ? src.similarity_score
+              : undefined;
+      if (!documentName.trim()) return null;
+      return {
+        documentId,
+        documentName: documentName.trim(),
+        confidence: confidenceRaw,
+      };
+    })
+    .filter((s): s is { documentId?: string; documentName: string; confidence?: number } => s != null);
+}
+
+function sanitizeAssistantContent(raw: string): string {
+  return raw
+    .replace(/\[(?:Nguồn|Source):[^\]]*\]/gi, "")
+    .replace(/\((?:Nguồn|Source):[^)]*\)/gi, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Chuẩn hóa để so sánh trùng/lặp ý giữa các bullet. */
+function normalizeBulletKey(text: string): string {
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[.:;，、]+$/u, "")
+    .trim();
+}
+
+const BULLET_LINE_RE =
+  /^([\t ]*)(?:[-*•]\s+|\d{1,3}\.\s+)(.+)$/u;
+
+type ListNode = { text: string; children: ListNode[] };
+
+function bulletDepthFromRawLine(rawLine: string): number {
+  const m = rawLine.match(BULLET_LINE_RE);
+  if (!m) return 0;
+  const lead = m[1].replace(/\t/g, "  ");
+  return Math.min(12, Math.floor(lead.length / 2));
+}
+
+function parseBulletLine(rawLine: string): { depth: number; text: string } | null {
+  const m = rawLine.match(BULLET_LINE_RE);
+  if (!m) return null;
+  return { depth: bulletDepthFromRawLine(rawLine), text: m[2].trim() };
+}
+
+/** Gộp bullet trùng hoặc bullet cha rồi lại bullet con trùng nội dung ngắn hơn. */
+function dedupeBulletRuns(entries: { depth: number; text: string }[]): { depth: number; text: string }[] {
+  const out: { depth: number; text: string }[] = [];
+  for (const cur of entries) {
+    const key = normalizeBulletKey(cur.text);
+    if (!key) continue;
+    const last = out[out.length - 1];
+    if (last) {
+      const lastKey = normalizeBulletKey(last.text);
+      if (key === lastKey) continue;
+      const sameDepth = last.depth === cur.depth;
+      const longerExtendsShorter =
+        sameDepth &&
+        lastKey.length > 0 &&
+        key.startsWith(lastKey) &&
+        key.length > lastKey.length &&
+        /[\s:：\-–—(,]/.test(key.charAt(lastKey.length));
+      const shorterIsPrefixDrop =
+        sameDepth &&
+        key.length > 0 &&
+        lastKey.startsWith(key) &&
+        lastKey.length > key.length &&
+        /[\s:：\-–—(,]/.test(lastKey.charAt(key.length));
+      if (longerExtendsShorter) {
+        out[out.length - 1] = cur;
+        continue;
+      }
+      if (shorterIsPrefixDrop) {
+        continue;
+      }
+    }
+    out.push(cur);
+  }
+  return out;
+}
+
+function buildListTree(entries: { depth: number; text: string }[]): ListNode[] {
+  const roots: ListNode[] = [];
+  const stack: { depth: number; container: ListNode[] }[] = [{ depth: -1, container: roots }];
+
+  for (const { depth, text } of entries) {
+    while (stack.length > 1 && stack[stack.length - 1]!.depth >= depth) {
+      stack.pop();
+    }
+    const parent = stack[stack.length - 1]!.container;
+    const node: ListNode = { text, children: [] };
+    parent.push(node);
+    stack.push({ depth, container: node.children });
+  }
+  return roots;
+}
+
+function renderListNodes(nodes: ListNode[], depth: number): ReactNode {
+  const depthClass = `chat-depth-${Math.min(5, depth)}`;
+  return (
+    <ul className={`chat-nested-ul ${depthClass}`}>
+      {nodes.map((node, i) => (
+        <li key={`${depth}-${i}-${node.text.slice(0, 48)}`}>
+          {node.text}
+          {node.children.length > 0 ? renderListNodes(node.children, depth + 1) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function renderAssistantContent(raw: string): ReactNode {
+  const content = sanitizeAssistantContent(raw);
+  const lines = content.split("\n");
+  const blocks: Array<{ type: "p"; lines: string[] } | { type: "ul"; roots: ListNode[] }> = [];
+  let idx = 0;
+
+  while (idx < lines.length) {
+    const rawLine = lines[idx];
+    const trimmed = rawLine.trim();
+    if (!trimmed) {
+      idx += 1;
+      continue;
+    }
+
+    const bullet = parseBulletLine(rawLine);
+    if (bullet) {
+      const bulletLines: string[] = [];
+      while (idx < lines.length) {
+        const rl = lines[idx];
+        if (!rl.trim()) break;
+        if (!parseBulletLine(rl)) break;
+        bulletLines.push(rl);
+        idx += 1;
+      }
+      const entries = dedupeBulletRuns(
+        bulletLines.map((l) => parseBulletLine(l)!).filter((e) => e.text.length > 0)
+      );
+      if (entries.length > 0) {
+        blocks.push({ type: "ul", roots: buildListTree(entries) });
+      }
+      continue;
+    }
+
+    const para: string[] = [];
+    while (idx < lines.length) {
+      const rl = lines[idx];
+      if (!rl.trim()) break;
+      if (parseBulletLine(rl)) break;
+      para.push(rl.trimEnd());
+      idx += 1;
+    }
+    if (para.length > 0) {
+      blocks.push({ type: "p", lines: para });
+    }
+  }
+
+  if (blocks.length === 0) {
+    return <p className="mb-0">{content}</p>;
+  }
+
+  return (
+    <div className="assistant-rich-text space-y-2">
+      {blocks.map((block, blockIdx) => {
+        if (block.type === "p") {
+          const text = block.lines.join("\n");
+          return (
+            <p key={`p-${blockIdx}`} className="mb-0 whitespace-pre-wrap">
+              {text}
+            </p>
+          );
+        }
+        return <div key={`ul-${blockIdx}`}>{renderListNodes(block.roots, 0)}</div>;
+      })}
+    </div>
+  );
+}
+
 export interface ChatViewProps {
   isHistoryOpen: boolean;
   onToggleHistory: () => void;
   onNavigateToSearch: (query?: string) => void;
+  /** UUID tài liệu từ URL `?doc=` — mọi tin gửi đi kèm targetDocumentId cho BE. */
+  contextDocumentId?: string | null;
+  onClearDocumentContext?: () => void;
 }
 
 export function ChatView({
   isHistoryOpen,
   onToggleHistory,
   onNavigateToSearch,
+  contextDocumentId = null,
+  onClearDocumentContext,
 }: ChatViewProps) {
   const { language } = useLanguageStore();
   const isEn = language === "en";
@@ -85,6 +338,7 @@ export function ChatView({
   const [tags, setTags] = useState<DocumentTagResponse[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -92,6 +346,15 @@ export function ChatView({
       behavior: "smooth",
     });
   }, [messages]);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "50px";
+    const nextHeight = Math.min(200, Math.max(50, el.scrollHeight));
+    el.style.height = `${nextHeight}px`;
+    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
+  }, [input]);
 
   useEffect(() => {
     getProfile()
@@ -170,15 +433,16 @@ export function ChatView({
               convertedRating: rating,
             });
 
+            const historySources = mapApiSourcesToUi(
+              (assistantMsg as { sources?: unknown; sourceChunks?: unknown }).sources ??
+                (assistantMsg as { sources?: unknown; sourceChunks?: unknown }).sourceChunks
+            );
+
             built.push({
               id: assistantId,
               role: "assistant",
               content: assistantMsg.content,
-              sources: (assistantMsg.sources ?? []).map((s) => ({
-                documentId: s.documentId,
-                documentName: s.fileName,
-                confidence: s.relevanceScore,
-              })),
+              sources: historySources,
               timestamp: new Date(assistantMsg.createdAt ?? Date.now()),
               rating,
             });
@@ -260,6 +524,7 @@ export function ChatView({
         message: text,
         conversationId: conversationId ?? undefined,
         tagIds: selectedTagIds.length ? selectedTagIds : undefined,
+        targetDocumentId: contextDocumentId ?? undefined,
       });
 
       if (response.conversationId) {
@@ -401,23 +666,43 @@ export function ChatView({
         refreshTrigger={historyRefresh}
       />
 
-      <div
-        ref={scrollRef}
-        className="scrollbar-chat-hidden relative mx-auto flex min-h-0 w-full max-w-[1680px] flex-1 flex-col gap-6 overflow-y-auto scroll-smooth px-4 pb-5 pt-2 sm:flex-row sm:items-stretch sm:gap-8 sm:px-6 sm:pb-6 sm:pt-3"
-      >
+      <div className="relative mx-auto flex min-h-0 w-full flex-1 flex-col gap-6 px-4 pb-5 pt-2 sm:flex-row sm:items-stretch sm:gap-8 sm:px-6 sm:pb-6 sm:pt-3">
         <div
           className="pointer-events-none absolute left-1/2 top-24 h-72 w-[min(90%,42rem)] -translate-x-1/2 rounded-full bg-violet-500/[0.07] blur-3xl dark:bg-violet-500/10"
           aria-hidden
         />
 
-        <div className="relative mr-auto flex min-h-0 w-full min-w-0 max-w-6xl flex-1 flex-col rounded-3xl border border-zinc-200/80 bg-white/90 shadow-2xl shadow-zinc-900/[0.04] ring-1 ring-black/[0.03] backdrop-blur-xl dark:border-zinc-700/50 dark:bg-zinc-950/75 dark:shadow-black/40 dark:ring-white/[0.06] sm:rounded-[1.75rem]">
-            <div className="flex min-h-full flex-1 flex-col p-5 sm:p-8">
+        <div className="relative mx-auto flex min-h-0 w-full min-w-0 max-w-[1000px] flex-1 flex-col rounded-3xl border border-zinc-200/80 bg-white/90 shadow-2xl shadow-zinc-900/[0.04] ring-1 ring-black/[0.03] backdrop-blur-xl dark:border-zinc-700/50 dark:bg-zinc-950/75 dark:shadow-black/40 dark:ring-white/[0.06] sm:rounded-[1.75rem]">
+            <div className="flex min-h-0 flex-1 flex-col p-5 sm:p-8">
               {error ? (
                 <div className="mb-4 rounded-2xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/35 dark:text-red-100">
                   {error}
                 </div>
               ) : null}
 
+              {contextDocumentId ? (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-violet-200/80 bg-violet-50/90 px-4 py-3 text-sm text-violet-900 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-100">
+                  <span>
+                    {isEn
+                      ? "Scope: answers use only the document selected in the URL (doc)."
+                      : "Phạm vi: câu trả lời chỉ dựa trên tài liệu được chọn (tham số doc trên URL)."}
+                  </span>
+                  {onClearDocumentContext ? (
+                    <button
+                      type="button"
+                      onClick={onClearDocumentContext}
+                      className="shrink-0 rounded-lg border border-violet-300/80 bg-white/90 px-3 py-1 text-xs font-medium text-violet-800 transition hover:bg-violet-100 dark:border-violet-600/50 dark:bg-zinc-900/80 dark:text-violet-200 dark:hover:bg-violet-950/80"
+                    >
+                      {isEn ? "Clear document scope" : "Bỏ giới hạn tài liệu"}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div
+                ref={scrollRef}
+                className="scrollbar-chat-hidden min-h-0 flex-1 overflow-y-auto scroll-smooth"
+              >
               {messages.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center py-6 sm:min-h-[min(70vh,28rem)] sm:py-10">
                   <div className="relative mb-6">
@@ -487,43 +772,45 @@ export function ChatView({
                           <Sparkles className="h-4 w-4 text-white" />
                         )}
                       </div>
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1">
                         <div className="mb-1 text-sm font-medium text-zinc-500 dark:text-zinc-400">
                           {message.role === "user" ? userLabel : isEn ? "AI Assistant" : "Trợ lý AI"}
                         </div>
                         <div
-                          className={`rounded-2xl px-0 py-1 text-[15px] leading-relaxed whitespace-pre-wrap text-zinc-900 dark:text-white ${
+                          className={`max-w-full break-words [overflow-wrap:anywhere] rounded-2xl px-0 py-1 text-[15px] leading-relaxed text-zinc-900 dark:text-white ${
+                            message.role === "user" ? "whitespace-pre-wrap" : "whitespace-normal"
+                          } ${
                             message.role === "assistant"
                               ? "border border-zinc-200/80 bg-gradient-to-br from-zinc-50 to-white px-4 py-3.5 dark:border-zinc-700/60 dark:from-zinc-900/80 dark:to-zinc-950/90"
                               : ""
                           }`}
+                          style={{ lineHeight: 1.6 }}
                         >
-                          {message.content}
+                          {message.role === "assistant"
+                            ? renderAssistantContent(message.content)
+                            : message.content}
                         </div>
-                        {message.sources && message.sources.length > 0 ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {message.sources.map((source, idx) => (
+                        {(() => {
+                          const topSource = pickTopSource(message.sources);
+                          if (!topSource) return null;
+                          return (
+                            <div className="mt-3 flex flex-wrap gap-2">
                               <button
-                                key={`${source.documentName}-${idx}`}
                                 type="button"
-                                onClick={() => setSelectedSource(source)}
+                                onClick={() => setSelectedSource(topSource)}
                                 className="inline-flex items-center gap-2 rounded-xl border border-zinc-200/90 bg-white/90 px-3 py-2 text-xs font-medium text-zinc-700 shadow-sm transition hover:border-violet-300/70 hover:bg-violet-50/80 dark:border-zinc-700/60 dark:bg-zinc-900/80 dark:text-zinc-200 dark:hover:border-violet-500/40 dark:hover:bg-violet-950/30"
                               >
-                                <span>{source.documentName}</span>
-                                {source.confidence != null ? (
+                                <FileText className="h-3.5 w-3.5 text-rose-500 dark:text-rose-300" />
+                                <span>{topSource.documentName}</span>
+                                {topSource.confidence != null ? (
                                   <span className="text-emerald-600 dark:text-emerald-400">
-                                    {Math.round(
-                                      source.confidence <= 1
-                                        ? source.confidence * 100
-                                        : source.confidence
-                                    )}
-                                    %
+                                    {toConfidencePercent(topSource.confidence)}%
                                   </span>
                                 ) : null}
                               </button>
-                            ))}
-                          </div>
-                        ) : null}
+                            </div>
+                          );
+                        })()}
                         {message.role === "assistant" && isRatingMessageId(message.id) && (
                           <div className="mt-3 flex gap-2">
                             <button
@@ -558,8 +845,9 @@ export function ChatView({
                   {isLoading ? <ChatbotAssistantTyping /> : null}
                 </div>
               )}
+              </div>
 
-              <div className="mt-auto border-t border-zinc-200/80 pt-5 dark:border-zinc-700/50">
+              <div className="sticky bottom-0 mt-4 border-t border-zinc-200/80 bg-white/95 pt-5 backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-950/90">
                 {tags.length > 0 ? (
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
@@ -595,6 +883,7 @@ export function ChatView({
                         <Paperclip className="h-5 w-5" />
                       </button>
                       <textarea
+                        ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
@@ -608,7 +897,7 @@ export function ChatView({
                         }
                         rows={1}
                         maxLength={INPUT_CHAR_LIMIT}
-                        className="max-h-40 min-h-[48px] flex-1 resize-none bg-transparent py-2.5 text-[15px] text-zinc-900 placeholder-zinc-500 outline-none dark:text-white dark:placeholder-zinc-500"
+                        className="min-h-[50px] max-h-[200px] flex-1 resize-none bg-transparent py-2.5 text-[15px] text-zinc-900 placeholder-zinc-500 outline-none dark:text-white dark:placeholder-zinc-500"
                       />
                       <button
                         type="submit"

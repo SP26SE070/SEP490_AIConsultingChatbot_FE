@@ -81,6 +81,25 @@ function isDocumentLimitWarning(message: string): boolean {
   );
 }
 
+/**
+ * Khi scope theo role: ngưỡng phân cấp trên tài liệu lấy theo **mức cao nhất (số lớn nhất 1–5)**
+ * trong các role được chọn — khớp ý “chỉ tick Employee (level 4) thì không cần chọn lại level tay”.
+ */
+function deriveMinimumRoleLevelFromSelectedRoles(
+  selectedRoleIds: number[],
+  allRoles: RoleResponse[]
+): number {
+  const levels = selectedRoleIds
+    .map((id) => allRoles.find((r) => r.id === id)?.level)
+    .filter((lv): lv is number => typeof lv === "number" && Number.isFinite(lv) && lv >= 1 && lv <= 5);
+  if (levels.length === 0) return 4;
+  return Math.max(...levels);
+}
+
+function visibilityUsesRoleScope(visibility: DocumentVisibility): boolean {
+  return visibility === "SPECIFIC_ROLES" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES";
+}
+
 function getVisibilityLabels(language: "vi" | "en"): Record<DocumentVisibility, string> {
   if (language === "en") {
     return {
@@ -205,6 +224,8 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
   const [uploadVisibility, setUploadVisibility] = useState<DocumentVisibility>("COMPANY_WIDE");
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  /** Ngưỡng phân cấp 1–5 khi upload (minimumRoleLevel trên BE) */
+  const [uploadMinimumRoleLevel, setUploadMinimumRoleLevel] = useState(4);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
@@ -448,11 +469,15 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
         setUploading(false);
         return;
       }
+      const resolvedMinimumRoleLevel = visibilityUsesRoleScope(visibility)
+        ? deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, roles)
+        : uploadMinimumRoleLevel;
       const params: UploadDocumentParams = {
         file,
         categoryId: categoryId || null,
         tagIds: tagIds.length ? tagIds : null,
         description: description || null,
+        minimumRoleLevel: resolvedMinimumRoleLevel,
         visibility: visibility || "COMPANY_WIDE",
         accessibleDepartments,
         accessibleRoles,
@@ -463,6 +488,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
       setUploadVisibility("COMPANY_WIDE");
       setSelectedDepartmentIds([]);
       setSelectedRoleIds([]);
+      setUploadMinimumRoleLevel(4);
       setEmbeddingTrackDocId(uploadedDoc.id);
       setEmbeddingTrackFileName(uploadedDoc.originalFileName || uploadedDoc.documentTitle || file.name);
       setEmbeddingTrackStatus(uploadedDoc.embeddingStatus || "PENDING");
@@ -888,6 +914,44 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
               </div>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 {t.selected}: {selectedRoleIds.length}
+              </p>
+            </div>
+          )}
+          {visibilityUsesRoleScope(uploadVisibility) && (
+            <div className="rounded-xl border border-cyan-200/80 bg-cyan-50/80 p-3 text-sm text-cyan-950 dark:border-cyan-900/50 dark:bg-cyan-950/30 dark:text-cyan-100">
+              <p className="font-medium">
+                {isEn ? "Level from roles (no manual pick)" : "Mức lấy theo vai trò (không chọn tay)"}
+              </p>
+              <p className="mt-1 text-xs text-cyan-900/90 dark:text-cyan-200/90">
+                {isEn
+                  ? `Saved as minimum role level = ${deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, roles)} — the highest numeric level (1–5) among selected roles. Example: only Employee (4) → 4.`
+                  : `Hệ thống lưu mức tối thiểu = ${deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, roles)} — lấy theo mức lớn nhất (1–5) trong các vai trò đã chọn. Ví dụ: chỉ Employee (4) → 4.`}
+              </p>
+            </div>
+          )}
+          {(uploadVisibility === "COMPANY_WIDE" || uploadVisibility === "SPECIFIC_DEPARTMENTS") && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Minimum role level (1–5)" : "Mức tối thiểu để xem (1–5)"}
+              </label>
+              <select
+                value={uploadMinimumRoleLevel}
+                onChange={(e) => setUploadMinimumRoleLevel(Number(e.target.value))}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {[1, 2, 3, 4, 5].map((lv) => (
+                  <option key={lv} value={lv}>
+                    {lv}
+                    {isEn
+                      ? [" — Executive", " — Management", " — Senior", " — Employee", " — Intern / External"][lv - 1]
+                      : [" — Điều hành", " — Quản lý", " — Senior", " — Nhân viên", " — Thực tập / bên ngoài"][lv - 1]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-zinc-500">
+                {isEn
+                  ? "User level X only sees documents/chunks where this value >= X."
+                  : "User level X chỉ thấy tài liệu/chunk khi giá trị này >= X."}
               </p>
             </div>
           )}
@@ -1730,12 +1794,18 @@ function UpdateAccessModal({
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>(
     doc.accessibleRoles ?? []
   );
+  const [minimumRoleLevel, setMinimumRoleLevel] = useState<number>(doc.minimumRoleLevel ?? 4);
   const requiresDepartments =
     visibility === "SPECIFIC_DEPARTMENTS" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES";
   const requiresRoles =
     visibility === "SPECIFIC_ROLES" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES";
   const departmentSelectionInvalid = requiresDepartments && selectedDepartmentIds.length === 0;
   const roleSelectionInvalid = requiresRoles && selectedRoleIds.length === 0;
+  const roleScoped = visibilityUsesRoleScope(visibility);
+
+  useEffect(() => {
+    setMinimumRoleLevel(doc.minimumRoleLevel ?? 4);
+  }, [doc.id, doc.minimumRoleLevel]);
 
   const toggleDepartment = (departmentId: number) => {
     setSelectedDepartmentIds((prev) =>
@@ -1759,8 +1829,12 @@ function UpdateAccessModal({
     if (roleSelectionInvalid) {
       return;
     }
+    const resolvedMinimumRoleLevel = roleScoped
+      ? deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, availableRoles)
+      : minimumRoleLevel;
     const body: UpdateDocumentAccessRequest = {
       visibility,
+      minimumRoleLevel: resolvedMinimumRoleLevel,
       accessibleDepartments:
         visibility === "SPECIFIC_DEPARTMENTS" || visibility === "SPECIFIC_DEPARTMENTS_AND_ROLES"
           ? selectedDepartmentIds
@@ -1811,6 +1885,41 @@ function UpdateAccessModal({
               ))}
             </select>
           </div>
+
+          {roleScoped ? (
+            <div className="rounded-xl border border-cyan-200/80 bg-cyan-50/80 p-4 text-sm text-cyan-950 dark:border-cyan-900/50 dark:bg-cyan-950/30 dark:text-cyan-100">
+              <p className="font-medium text-cyan-950 dark:text-cyan-50">
+                {isEn ? "Level from selected roles" : "Mức theo vai trò đã chọn"}
+              </p>
+              <p className="mt-1 text-xs text-cyan-900/90 dark:text-cyan-200/90">
+                {isEn
+                  ? `Minimum role level sent on save = ${deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, availableRoles)} (highest 1–5 among selected roles; 4 if level missing).`
+                  : `Khi lưu, mức tối thiểu = ${deriveMinimumRoleLevelFromSelectedRoles(selectedRoleIds, availableRoles)} (lấy mức lớn nhất 1–5 trong các role; mặc định 4 nếu thiếu level).`}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Minimum role level (1–5)" : "Mức tối thiểu để xem (1–5)"}
+              </label>
+              <select
+                value={minimumRoleLevel}
+                onChange={(e) => setMinimumRoleLevel(Number(e.target.value))}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                {[1, 2, 3, 4, 5].map((lv) => (
+                  <option key={lv} value={lv}>
+                    {lv}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-zinc-500">
+                {isEn
+                  ? "User level X only sees chunks when this value >= X."
+                  : "User level X chỉ thấy chunk khi giá trị này >= X."}
+              </p>
+            </div>
+          )}
 
           {(requiresDepartments || requiresRoles) && (
             <div className="grid gap-4 md:grid-cols-2">
