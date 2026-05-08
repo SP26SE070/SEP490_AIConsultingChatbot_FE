@@ -1,6 +1,7 @@
 "use client";
 
-import { FileStack, Loader2 } from "lucide-react";
+import { FileStack } from "lucide-react";
+import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 import { ErrorNotice } from "@/components/ui";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -54,7 +55,7 @@ export function DocumentEmbeddingOverview({
   if (loading) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-3xl bg-white p-8 shadow-lg shadow-green-100/60 dark:bg-zinc-950 dark:shadow-black/40">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-500/70" />
+        <ChatbotSpinner size="lg" />
       </div>
     );
   }

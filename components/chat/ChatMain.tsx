@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Send, Plus, Settings, AtSign, X } from "lucide-react";
+import { Menu, Send, Plus, Settings, AtSign, X, Sparkles } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 
 interface Message {
@@ -103,13 +103,13 @@ export function ChatMain({ chatId, onToggleHistory, historyOpen }: ChatMainProps
               ))}
               {isTyping && (
                 <div className="flex gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                    <div className="h-2 w-2 rounded-full bg-zinc-400"></div>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-800 shadow-md shadow-violet-900/25 ring-1 ring-white/15">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-200" strokeWidth={2} />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]"></div>
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]"></div>
-                    <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400"></div>
+                  <div className="flex items-center gap-1 pt-1.5">
+                    <span className="h-2 w-2 animate-chatbot-bounce rounded-full bg-emerald-500 [animation-delay:0ms]" />
+                    <span className="h-2 w-2 animate-chatbot-bounce rounded-full bg-violet-500 [animation-delay:150ms]" />
+                    <span className="h-2 w-2 animate-chatbot-bounce rounded-full bg-indigo-500 [animation-delay:300ms]" />
                   </div>
                 </div>
               )}

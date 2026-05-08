@@ -126,6 +126,62 @@ footer {
   animation: workspaceViewEnter 240ms ease-out both;
 }
 
+/* AI chatbot entry loading */
+@keyframes chatbotOrbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes chatbotOrbitReverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes chatbotShimmer {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+  }
+}
+@keyframes chatbotProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+@keyframes chatbotBounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.animate-chatbot-orbit {
+  animation: chatbotOrbit 12s linear infinite;
+}
+.animate-chatbot-orbit-reverse {
+  animation: chatbotOrbitReverse 18s linear infinite;
+}
+.animate-chatbot-shimmer {
+  animation: chatbotShimmer 2.2s ease-in-out infinite;
+}
+.animate-chatbot-progress {
+  animation: chatbotProgress 1.4s ease-in-out infinite;
+}
+.animate-chatbot-bounce {
+  animation: chatbotBounce 1s ease-in-out infinite;
+}
+
 /* Pulse animation for icons */
 @keyframes pulse-glow {
   0%, 100% {

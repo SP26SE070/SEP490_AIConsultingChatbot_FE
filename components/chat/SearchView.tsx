@@ -9,7 +9,6 @@ import {
   FileText,
   Calendar,
   Tag,
-  Loader2,
   Download,
   History,
   CheckCircle2,
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
+import { ChatbotEntryLoading, ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
 import type { DocumentResponse, DocumentCategoryResponse, DocumentTagResponse } from "@/types/knowledge";
 import {
   listDocuments,
@@ -907,9 +907,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
           </>
         ) : null}
         {listLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
-          </div>
+          <ChatbotEntryLoading variant="panel" />
         ) : listMessage() ? (
           <div className="mx-auto flex max-w-lg justify-center px-2">
             <div className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-10 text-center shadow-lg dark:border-zinc-800 dark:bg-zinc-900/60 dark:shadow-black/20">
@@ -1019,7 +1017,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                         id="document-detail-title"
                         className="mt-1 flex items-center gap-2 text-base font-semibold leading-snug text-zinc-900 dark:text-white sm:text-lg"
                       >
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-400" />
+                        <ChatbotSpinner size="sm" className="shrink-0" />
                         <span className="truncate text-zinc-500 dark:text-zinc-300">
                           {selected.documentTitle || selected.originalFileName}
                         </span>
@@ -1138,7 +1136,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                     className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-500 disabled:opacity-50 sm:min-w-32"
                   >
                     {actionLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <ChatbotSpinner size="sm" tone="inverse" />
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
@@ -1189,8 +1187,8 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                     </div>
                     <div className="scrollbar-chat-hidden max-h-44 overflow-y-auto">
                       {versionsLoading ? (
-                        <div className="flex justify-center py-4">
-                          <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                        <div className="flex justify-center py-6">
+                          <ChatbotSpinner size="md" />
                         </div>
                       ) : (
                         <ul className="space-y-1.5">
@@ -1288,10 +1286,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
               </div>
               <div className="scrollbar-chat-hidden flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-5">
                 {previewLoading ? (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 py-16 dark:border-zinc-800 dark:bg-zinc-950/50">
-                    <Loader2 className="h-9 w-9 animate-spin text-emerald-500" />
-                    <p className="text-xs text-zinc-500">{t.loading}</p>
-                  </div>
+                  <ChatbotEntryLoading variant="spot" title={t.loading} className="py-14" />
                 ) : previewError ? (
                   <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-5 text-center dark:border-amber-500/25 dark:bg-amber-950/25">
                     <p className="text-sm leading-relaxed text-amber-700 dark:text-amber-100/90">{previewError}</p>
@@ -1301,7 +1296,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                       onClick={() => void handleDownload(displayDoc ?? selected)}
                       className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                     >
-                      {actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      {actionLoading ? <ChatbotSpinner size="xs" tone="inverse" /> : <Download className="h-3.5 w-3.5" />}
                       {t.download}
                     </button>
                   </div>

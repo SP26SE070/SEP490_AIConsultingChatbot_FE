@@ -241,6 +241,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
   const [detailDoc, setDetailDoc] = useState<DocumentResponse | null>(null);
   const [detailPreview, setDetailPreview] = useState<DocumentPreviewResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailVersions, setDetailVersions] = useState<DocumentVersionResponse[]>([]);
   const [embeddingModalOpen, setEmbeddingModalOpen] = useState(false);
   const [embeddingTrackDocId, setEmbeddingTrackDocId] = useState<string | null>(null);
   const [embeddingTrackFileName, setEmbeddingTrackFileName] = useState<string>("");
@@ -631,9 +632,14 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     setDetailLoading(true);
     setError(null);
     try {
-      const [doc, preview] = await Promise.all([getDocument(id), getDocumentPreview(id)]);
+      const [doc, preview, versionHistory] = await Promise.all([
+        getDocument(id),
+        getDocumentPreview(id),
+        getVersionHistory(id).catch(() => []),
+      ]);
       setDetailDoc(doc);
       setDetailPreview(preview);
+      setDetailVersions(versionHistory);
     } catch (e) {
       setError(e instanceof Error ? e.message : isEn ? "Failed to load document details" : "Không tải được chi tiết tài liệu");
     } finally {
@@ -1426,6 +1432,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
                   if (detailPreview?.kind === "pdf") URL.revokeObjectURL(detailPreview.url);
                   setDetailDoc(null);
                   setDetailPreview(null);
+                  setDetailVersions([]);
                 }}
                 className="rounded p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
@@ -1483,6 +1490,45 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
                   </span>
                 </div>
               </div>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                  {isEn ? "Versions" : "Phiên bản"}
+                </p>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  {detailVersions.length}
+                </span>
+              </div>
+              {detailLoading ? (
+                <p className="text-sm text-zinc-500">{isEn ? "Loading versions..." : "Đang tải phiên bản..."}</p>
+              ) : detailVersions.length > 0 ? (
+                <ul className="max-h-48 space-y-2 overflow-auto pr-1">
+                  {detailVersions.map((v) => (
+                    <li
+                      key={v.versionId}
+                      className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {isEn ? "Version" : "Phiên bản"} {v.versionNumber}
+                        </span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {new Date(v.createdAt).toLocaleString(language === "en" ? "en-US" : "vi-VN")}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {v.versionNote?.trim() || "—"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  {isEn ? "No version history yet." : "Chưa có lịch sử phiên bản."}
+                </p>
+              )}
             </div>
 
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus, MessageSquare, Clock, X } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { getConversations } from "@/lib/api/chatbot";
+import { ChatbotEntryLoading } from "@/components/chat/ChatbotEntryLoading";
 
 interface ConversationListItem {
   id: string;
@@ -136,14 +137,7 @@ export function ChatHistorySidebarNew({
             className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           >
             {loading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse rounded-lg bg-zinc-100 p-3 dark:bg-zinc-900">
-                    <div className="h-4 w-3/4 rounded bg-zinc-200 dark:bg-zinc-800" />
-                    <div className="mt-2 h-3 w-1/2 rounded bg-zinc-200 dark:bg-zinc-800" />
-                  </div>
-                ))}
-              </div>
+              <ChatbotEntryLoading variant="sidebar" />
             ) : (
               <div className="space-y-4 pb-2">
                 {today.length > 0 && (
