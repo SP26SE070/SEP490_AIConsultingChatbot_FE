@@ -12,6 +12,7 @@ import { getProfile } from "@/lib/api/profile";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { useAppTheme } from "@/lib/use-app-theme";
+import { AppLogo } from "@/components/brand/AppLogo";
 
 const TENANT_FALLBACK_EMAIL = "tenantadmin@company.vn";
 
@@ -40,6 +41,8 @@ export function DashboardHeader({
     () => TENANT_FALLBACK_EMAIL.split("@")[0] || "Tenant Admin"
   );
   const [displayEmail, setDisplayEmail] = useState(TENANT_FALLBACK_EMAIL);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const { language, toggleLanguage } = useLanguageStore();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +60,8 @@ export function DashboardHeader({
         if (profile?.fullName?.trim()) {
           setDisplayName(profile.fullName.trim());
         }
+        setTenantLogoUrl(profile?.tenantLogoUrl ?? null);
+        setTenantName(profile?.tenantName ?? null);
       })
       .catch(() => {
         // Keep fallback from auth store email when profile request fails.
@@ -109,8 +114,14 @@ export function DashboardHeader({
 
         <Link
           href="/tenant-admin"
-          className="flex h-11 min-w-0 max-w-[9.5rem] items-center px-1 transition hover:text-emerald-600 sm:max-w-56 dark:hover:text-emerald-400"
+          className="flex h-11 min-w-0 max-w-[9.5rem] items-center gap-2 px-1 transition hover:text-emerald-600 sm:max-w-56 dark:hover:text-emerald-400"
         >
+          <AppLogo
+            size={32}
+            tenantLogoUrl={tenantLogoUrl}
+            tenantName={tenantName}
+            className="shrink-0"
+          />
           <div className="min-w-0 leading-tight">
             <p className="hidden truncate text-xs font-medium text-zinc-500 sm:block dark:text-zinc-400">
               Internal Consultant AI

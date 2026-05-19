@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getChatbotConfig, updateChatbotConfig, type ChatbotMode } from "@/lib/api/chatbot-config";
+import {
+  getChatbotConfig,
+  updateChatbotConfig,
+  type ChatbotMode,
+  type EmbeddingProvider,
+} from "@/lib/api/chatbot-config";
 import { getTenantFeedback, type FeedbackAnalytics } from "@/lib/api/feedback";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -14,6 +19,8 @@ export default function AIInsightsPage() {
 
   const [mode, setMode] = useState<ChatbotMode>("BALANCED");
   const [originalMode, setOriginalMode] = useState<ChatbotMode>("BALANCED");
+  const [embeddingProvider, setEmbeddingProvider] = useState<EmbeddingProvider>("GEMINI");
+  const [originalEmbeddingProvider, setOriginalEmbeddingProvider] = useState<EmbeddingProvider>("GEMINI");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +33,15 @@ export default function AIInsightsPage() {
       .then((config) => {
         setMode(config.mode);
         setOriginalMode(config.mode);
+        setEmbeddingProvider(config.embeddingProvider ?? "GEMINI");
+        setOriginalEmbeddingProvider(config.embeddingProvider ?? "GEMINI");
         setError(null);
       })
       .catch(() => {
         setMode("BALANCED");
         setOriginalMode("BALANCED");
+        setEmbeddingProvider("GEMINI");
+        setOriginalEmbeddingProvider("GEMINI");
         setError(isEn ? "Failed to load config. Using default settings." : "Không tải được cấu hình. Sử dụng cài đặt mặc định.");
       })
       .finally(() => {
@@ -57,8 +68,9 @@ export default function AIInsightsPage() {
     setError(null);
     setSuccessMessage(null);
     try {
-      await updateChatbotConfig(mode);
+      await updateChatbotConfig({ mode, embeddingProvider });
       setOriginalMode(mode);
+      setOriginalEmbeddingProvider(embeddingProvider);
       setSuccessMessage(isEn ? "Chatbot behavior updated successfully" : "Cập nhật hành vi chatbot thành công");
     } catch (e) {
       setError(e instanceof Error ? e.message : isEn ? "Failed to update. Please try again." : "Cập nhật thất bại. Vui lòng thử lại.");
@@ -67,7 +79,7 @@ export default function AIInsightsPage() {
     }
   };
 
-  const hasChanges = mode !== originalMode;
+  const hasChanges = mode !== originalMode || embeddingProvider !== originalEmbeddingProvider;
 
   const renderStars = (rating: number) => {
     return Array.from({ length: rating }).map((_, i) => (
@@ -194,19 +206,82 @@ export default function AIInsightsPage() {
                 </div>
               </label>
 
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!hasChanges || saving}
-                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {saving ? (isEn ? "Saving..." : "Đang lưu...") : (isEn ? "Save Settings" : "Lưu cài đặt")}
-              </button>
             </div>
           )}
         </div>
 
-        {/* Section 2: Feedback Summary */}
+        {/* Section 2: Embedding Provider */}
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="mb-4 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              {isEn ? "Embedding Provider" : "Nhà cung cấp Embedding"}
+            </h2>
+          </div>
+          <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
+            {isEn
+              ? "Choose one embedding engine for your tenant: Gemini cloud or MxBai Embed Large local."
+              : "Chọn một engine embedding cho tenant: Gemini cloud hoặc MxBai Embed Large local."}
+          </p>
+
+          <div className="space-y-3">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 p-4 transition hover:border-purple-300 hover:bg-purple-50/50 dark:border-zinc-700 dark:hover:border-purple-700 dark:hover:bg-purple-950/20">
+              <input
+                type="radio"
+                name="embedding-provider"
+                value="GEMINI"
+                checked={embeddingProvider === "GEMINI"}
+                onChange={(e) => setEmbeddingProvider(e.target.value as EmbeddingProvider)}
+                disabled={loading || saving}
+                className="mt-1 h-4 w-4 shrink-0 text-purple-600 accent-purple-600 focus:outline-none focus:ring-0 focus:ring-offset-0"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-zinc-900 dark:text-white">Gemini</div>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  {isEn ? "Cloud embedding (default, fastest setup)." : "Embedding cloud (mặc định, chạy nhanh và ổn định)."}
+                </p>
+              </div>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 p-4 transition hover:border-purple-300 hover:bg-purple-50/50 dark:border-zinc-700 dark:hover:border-purple-700 dark:hover:bg-purple-950/20">
+              <input
+                type="radio"
+                name="embedding-provider"
+                value="LOCAL"
+                checked={embeddingProvider === "LOCAL"}
+                onChange={(e) => setEmbeddingProvider(e.target.value as EmbeddingProvider)}
+                disabled={loading || saving}
+                className="mt-1 h-4 w-4 shrink-0 text-purple-600 accent-purple-600 focus:outline-none focus:ring-0 focus:ring-offset-0"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-zinc-900 dark:text-white">MxBai Embed Large</div>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  {isEn
+                    ? "On-premise local embedding endpoint. Requires 1024-dimension chunk store."
+                    : "Endpoint embedding cục bộ on-premise. Cần kho chunk dimension 1024."}
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!hasChanges || saving}
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? (isEn ? "Saving..." : "Đang lưu...") : (isEn ? "Save Settings" : "Lưu cài đặt")}
+            </button>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {isEn
+                ? "Applies to this tenant configuration."
+                : "Áp dụng cho cấu hình tenant hiện tại."}
+            </span>
+          </div>
+        </div>
+
+        {/* Section 3: Feedback Summary */}
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">
             {isEn ? "Feedback Summary" : "Tóm tắt phản hồi"}
@@ -262,7 +337,7 @@ export default function AIInsightsPage() {
           )}
         </div>
 
-        {/* Section 3: Low Rated Responses */}
+        {/* Section 4: Low Rated Responses */}
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
           <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">
             {isEn ? "Low Rated Responses" : "Phản hồi đánh giá thấp"}

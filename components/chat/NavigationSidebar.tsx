@@ -23,6 +23,7 @@ import {
 import { logout } from "@/lib/api/auth";
 import { getProfile } from "@/lib/api/profile";
 import { ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
+import { AppLogo } from "@/components/brand/AppLogo";
 
 export type ChatbotNavView = "chat" | "search" | "analytics";
 
@@ -70,6 +71,8 @@ export function NavigationSidebar({
   const [displayName, setDisplayName] = useState(
     currentUser?.email?.split("@")[0] || "User"
   );
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
@@ -96,6 +99,8 @@ export function NavigationSidebar({
     getProfile()
       .then((p) => {
         if (p?.fullName?.trim()) setDisplayName(p.fullName.trim());
+        setTenantLogoUrl(p?.tenantLogoUrl ?? null);
+        setTenantName(p?.tenantName ?? null);
         const profileAuthorities = Array.isArray(p?.permissions) ? p.permissions.filter(Boolean) : [];
         if (profileAuthorities.length > 0) {
           setAuthorities((prev) => Array.from(new Set([...prev, ...profileAuthorities])));
@@ -156,17 +161,25 @@ export function NavigationSidebar({
 
   return (
     <aside className="relative z-50 flex h-full min-h-0 w-16 shrink-0 flex-col items-stretch border-r border-zinc-200 bg-white py-3 dark:border-zinc-800 dark:bg-zinc-950">
-      <div
-        className="group relative mx-auto mb-4 flex shrink-0 cursor-default flex-col items-center gap-1"
-        title={displayName}
-        aria-label={displayName}
-      >
-        <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
-          <span className="text-sm font-bold">{nameInitial}</span>
+      <div className="mx-auto mb-4 flex shrink-0 flex-col items-center gap-2">
+        <AppLogo
+          size={36}
+          tenantLogoUrl={tenantLogoUrl}
+          tenantName={tenantName}
+          className="rounded-lg bg-white shadow-sm"
+        />
+        <div
+          className="group relative flex shrink-0 cursor-default flex-col items-center gap-1"
+          title={displayName}
+          aria-label={displayName}
+        >
+          <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+            <span className="text-sm font-bold">{nameInitial}</span>
+          </div>
+          <span className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 max-w-[14rem] -translate-y-1/2 truncate rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 dark:bg-zinc-700">
+            {displayName}
+          </span>
         </div>
-        <span className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 max-w-[14rem] -translate-y-1/2 truncate rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 dark:bg-zinc-700">
-          {displayName}
-        </span>
       </div>
 
       <nav

@@ -11,8 +11,10 @@ import {
   BuildingOffice2Icon,
   CalendarDaysIcon,
   ClockIcon,
+  PhotoIcon,
 } from "@heroicons/react/24/outline";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { AppLogo } from "@/components/brand/AppLogo";
 import { getStoredUser } from "@/lib/auth-store";
 import { roleToPath } from "@/lib/auth-routes";
 import { useRouter } from "next/navigation";
@@ -23,6 +25,7 @@ import {
   requestUpdateContactEmail,
   verifyAndUpdateContactEmail,
 } from "@/lib/api/profile";
+import { uploadTenantLogo } from "@/lib/api/tenant-admin";
 import type {
   UserProfileResponse,
   UpdateProfileRequest,
@@ -77,6 +80,17 @@ function normalizeVietnamPhoneFromInput(localDigits: string): string | null {
   }
   if (digits.length !== 9 && digits.length !== 10) return null;
   return `+84${digits}`;
+}
+
+const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
 }
 
 export default function ProfilePage() {
@@ -143,6 +157,14 @@ export default function ProfilePage() {
   const [contactSuccess, setContactSuccess] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
 
+  // Tenant branding (logo) state
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
+
   const prettifyContactEmailError = (message: string) => {
     const m = message || "";
     if (
@@ -196,6 +218,18 @@ export default function ProfilePage() {
   useEffect(() => {
     setDobUnder18Notice((prev) => (prev !== null ? t.profileDobUnder18 : null));
   }, [language, t.profileDobUnder18]);
+
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreviewUrl(null);
+      return;
+    }
+    const preview = URL.createObjectURL(logoFile);
+    setLogoPreviewUrl(preview);
+    return () => {
+      URL.revokeObjectURL(preview);
+    };
+  }, [logoFile]);
 
   const openDobPicker = () => {
     dobEditedRef.current = true;
@@ -332,6 +366,46 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setLogoFile(file);
+    setLogoError(null);
+    setLogoSuccess(null);
+  };
+
+  const handleLogoUpload = async () => {
+    setLogoError(null);
+    setLogoSuccess(null);
+    if (!logoFile) {
+      setLogoError(t.profileTenantLogoErrorEmpty);
+      return;
+    }
+    if (logoFile.size > MAX_LOGO_SIZE_BYTES) {
+      setLogoError(t.profileTenantLogoErrorSize);
+      return;
+    }
+    if (!ALLOWED_LOGO_TYPES.has(logoFile.type)) {
+      setLogoError(t.profileTenantLogoErrorType);
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const result = await uploadTenantLogo(logoFile);
+      setProfile((prev) =>
+        prev ? { ...prev, tenantLogoUrl: result.logoUrl ?? prev.tenantLogoUrl } : prev
+      );
+      setLogoSuccess(t.profileTenantLogoSuccess);
+      setLogoFile(null);
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : t.profileUpdateFailed);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const inputClass =
     "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus:border-violet-400 dark:focus:ring-violet-400/30";
   /** Một viền: text + icon lịch cuối dòng */
@@ -339,6 +413,7 @@ export default function ProfilePage() {
     "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus-within:border-violet-400 dark:focus-within:ring-violet-400/30";
   const labelClass =
     "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+  const logoDisplayUrl = logoPreviewUrl ?? profile?.tenantLogoUrl ?? null;
 
   if (loading) {
     return (
@@ -553,6 +628,71 @@ export default function ProfilePage() {
                 </button>
               </form>
             </section>
+
+            {isTenantAdmin ? (
+              <section className="h-full rounded-xl border-l-4 border-indigo-500 bg-white p-4 shadow-md shadow-indigo-500/10 dark:border-indigo-400 dark:bg-zinc-900/80 dark:shadow-indigo-900/20">
+                <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400">
+                    <PhotoIcon className="h-4 w-4" />
+                  </span>
+                  {t.profileTenantBrandingTitle}
+                </h2>
+                <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  {t.profileTenantBrandingHint}
+                </p>
+
+                {logoError && (
+                  <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
+                    {logoError}
+                  </p>
+                )}
+                {logoSuccess && (
+                  <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                    {logoSuccess}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-zinc-200 bg-white/80 p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/70">
+                    <AppLogo
+                      size={48}
+                      tenantLogoUrl={logoDisplayUrl}
+                      tenantName={profile.tenantName}
+                    />
+                  </div>
+                  <div className="min-w-[14rem] flex-1">
+                    <label htmlFor="tenantLogo" className={labelClass}>
+                      {t.profileTenantLogoLabel}
+                    </label>
+                    <input
+                      id="tenantLogo"
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleLogoFileChange}
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      {t.profileTenantLogoNote}
+                    </p>
+                    {logoFile && (
+                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                        {t.profileTenantLogoSelected}: {logoFile.name} - {formatBytes(logoFile.size)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogoUpload}
+                  disabled={logoUploading || !logoFile}
+                  className="mt-4 w-full rounded-xl bg-linear-to-r from-indigo-500 to-slate-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-slate-600 disabled:opacity-60"
+                >
+                  {logoUploading ? t.profileTenantLogoUploading : t.profileTenantLogoUpload}
+                </button>
+              </section>
+            ) : null}
 
             {/* Contact email (OTP) — cyan */}
             <section className="h-full rounded-xl border-l-4 border-cyan-500 bg-white p-4 shadow-md shadow-cyan-500/10 dark:border-cyan-400 dark:bg-zinc-900/80 dark:shadow-cyan-900/20">

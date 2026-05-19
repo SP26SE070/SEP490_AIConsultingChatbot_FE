@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { Globe, LogOut, Moon, Settings, Sun, User } from "lucide-react";
 import { logout } from "@/lib/api/auth";
 import { getAccessToken, getStoredUser, clearAuth } from "@/lib/auth-store";
@@ -12,6 +11,7 @@ import { roleToPath, hasAllowedRole } from "@/lib/auth-routes";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { useAppTheme } from "@/lib/use-app-theme";
+import { AppLogo } from "@/components/brand/AppLogo";
 
 const ROLE_EMPLOYEE = "ROLE_EMPLOYEE";
 const ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
@@ -63,6 +63,8 @@ export function AppHeader() {
     mounted && roles.length > 0 ? roleToPath(roles) : homeHrefFromPathname(pathname);
   const displayEmail = user?.email ?? "user@company.com";
   const [displayName, setDisplayName] = useState(displayEmail.split("@")[0] || "User");
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
   const { theme, toggleTheme } = useAppTheme();
 
   useEffect(() => {
@@ -71,6 +73,8 @@ export function AppHeader() {
         if (profile?.fullName?.trim()) {
           setDisplayName(profile.fullName.trim());
         }
+        setTenantLogoUrl(profile?.tenantLogoUrl ?? null);
+        setTenantName(profile?.tenantName ?? null);
       })
       .catch(() => {
         // keep fallback name from email
@@ -109,7 +113,12 @@ export function AppHeader() {
             href={homeHref}
             className="flex min-w-0 items-center gap-2.5 text-lg font-semibold text-zinc-900 dark:text-zinc-50"
           >
-            <ChatBubbleLeftRightIcon className="h-6 w-6 text-green-500" />
+            <AppLogo
+              size={28}
+              tenantLogoUrl={tenantLogoUrl}
+              tenantName={tenantName}
+              className="shrink-0"
+            />
             <span className="hidden max-w-[11rem] truncate leading-none sm:inline lg:max-w-none">Internal Consultant AI</span>
           </Link>
           <nav className="hidden items-center gap-1.5 md:flex">

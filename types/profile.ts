@@ -10,6 +10,7 @@ export interface UserProfileResponse {
   roleName: string | null;
   departmentName: string | null;
   tenantName: string | null;
+  tenantLogoUrl: string | null;
   createdAt: string; // ISO datetime
   updatedAt: string | null;
   lastLoginAt: string | null;
