@@ -1,6 +1,20 @@
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { TENANT_ADMIN_BASE } from "@/lib/api/config";
 
+async function handleTenantAdminResponse<T>(res: Response): Promise<T> {
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    if (typeof data.message === "string") throw new Error(data.message);
+    if (typeof data.error === "string") throw new Error(data.error);
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const first = Object.values(data).find((v) => typeof v === "string");
+      if (first) throw new Error(String(first));
+    }
+    throw new Error("Request failed");
+  }
+  return data as T;
+}
+
 export interface TenantDashboardResponse {
   totalUsers?: number;
   documents?: {
@@ -85,6 +99,23 @@ export interface RoleResponse {
   usersCount?: number;
   /** Optional permissions list (if BE returns in role detail). */
   permissions?: string[];
+}
+
+export interface TenantLogoUploadResponse {
+  logoUrl?: string;
+}
+
+/** POST /api/v1/tenant-admin/tenant/logo */
+export async function uploadTenantLogo(file: File): Promise<TenantLogoUploadResponse> {
+  const form = new FormData();
+  form.append("file", file);
+
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/tenant/logo`, {
+    method: "POST",
+    body: form,
+  });
+
+  return handleTenantAdminResponse<TenantLogoUploadResponse>(res);
 }
 
 /** Parse `permissions` from GET role / list (string[] or legacy { code }[]). */

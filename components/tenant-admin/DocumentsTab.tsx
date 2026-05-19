@@ -665,9 +665,25 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     setMenuPos(null);
     setError(null);
     setReindexing((prev) => ({ ...prev, [id]: true }));
+    setDocuments((prev) =>
+      prev.map((doc) => (doc.id === id ? { ...doc, embeddingStatus: "PENDING" } : doc))
+    );
+    setEmbeddingCompletedAtByDocId((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    previousEmbeddingStateRef.current[id] = "in-progress";
     try {
-      await reindexDocument(id);
-      // Show success message
+      const response = await reindexDocument(id);
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          doc.id === id
+            ? { ...doc, embeddingStatus: response?.status || "PENDING" }
+            : doc
+        )
+      );
       setError(null);
       // Refresh document list to show updated status
       await load();
