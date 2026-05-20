@@ -31,11 +31,11 @@ type FilterMode = "all" | "custom" | "fixed";
 const TAB_EASE = [0.22, 1, 0.36, 1] as const;
 
 const ROLE_LEVEL_OPTIONS = [
-  { value: 1, label: "Level 1 (Executive)" },
-  { value: 2, label: "Level 2 (Management)" },
-  { value: 3, label: "Level 3 (Senior)" },
-  { value: 4, label: "Level 4 (Employee)" },
-  { value: 5, label: "Level 5 (Intern / External)" },
+  { value: 1, label: "Level 1 — Executive (CEO, Giám đốc)" },
+  { value: 2, label: "Level 2 — Management (Manager, Trưởng phòng)" },
+  { value: 3, label: "Level 3 — Senior (Team Lead, Senior)" },
+  { value: 4, label: "Level 4 — Employee (Nhân viên)" },
+  { value: 5, label: "Level 5 — Intern (Thực tập)" },
 ];
 
 function isUnauthorizedError(error: unknown): boolean {
@@ -719,7 +719,7 @@ function CreateRoleModal({
             <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="HR Manager" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-500">Level *</label>
+            <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Role level" : "Cấp bậc"} *</label>
             <select
               value={form.level}
               onChange={(e) => setForm((p) => ({ ...p, level: Number(e.target.value) }))}
@@ -860,7 +860,7 @@ function EditRoleModal({
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-500">Level</label>
+            <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Role level" : "Cấp bậc"}</label>
             <select
               value={level}
               onChange={(e) => setLevel(Number(e.target.value))}

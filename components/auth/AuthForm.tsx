@@ -270,7 +270,7 @@ export function AuthForm({ mode, showRoleSelector = false }: AuthFormProps) {
                 type="button"
                 onClick={() => {
                   setMustChangePromptOpen(false);
-                  router.push("/profile?mustChangePassword=1");
+                  router.push("/first-password");
                   router.refresh();
                 }}
                 className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
