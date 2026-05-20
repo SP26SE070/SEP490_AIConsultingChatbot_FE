@@ -166,6 +166,36 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
                 <option key={r.id} value={r.id}>{r.name ?? r.code ?? r.id}</option>
               ))}
             </select>
+            {roleId !== "" && (() => {
+              const selectedRole = roles.find((r) => r.id === Number(roleId));
+              if (!selectedRole) return null;
+              const levelLabel = getRoleLevelDisplayLabel(selectedRole.level ?? 4, lang);
+              const levelNotInOptions = selectedRole.level !== undefined && selectedRole.level !== 1 && selectedRole.level !== 2 && selectedRole.level !== 3 && selectedRole.level !== 5;
+              return (
+                <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1.5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                    <span className="font-medium">{selectedRole.name ?? selectedRole.code}</span>
+                    {selectedRole.level !== undefined && selectedRole.level !== 4 && (
+                      <>
+                        {" — "}
+                        Cấp bậc: {levelLabel}
+                        {selectedRole.level < 4 && (
+                          <span className="ml-1 text-amber-600 dark:text-amber-400">
+                            (vai trò cao cấp hơn Employee)
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {(selectedRole.level === undefined || levelNotInOptions) && (
+                      <span className="ml-1 text-zinc-400 dark:text-zinc-500">
+                        (Employee — nhân viên)
+                      </span>
+                    )}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
           <div>
             <label className="block text-xs font-medium text-zinc-500">Phòng ban</label>

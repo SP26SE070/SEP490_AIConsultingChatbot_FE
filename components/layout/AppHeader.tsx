@@ -119,7 +119,6 @@ export function AppHeader() {
               tenantName={tenantName}
               className="shrink-0"
             />
-            <span className="hidden max-w-[11rem] truncate leading-none sm:inline lg:max-w-none">Internal Consultant AI</span>
           </Link>
           <nav className="hidden items-center gap-1.5 md:flex">
             {allowedLinks.map(({ href, label }) => {
@@ -166,9 +165,9 @@ export function AppHeader() {
 
           {isUserMenuOpen && (
             <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="border-b border-zinc-200 bg-gradient-to-br from-emerald-50 to-white px-4 py-3 dark:border-zinc-800 dark:from-emerald-950/20 dark:to-zinc-900">
+              <div className="border-b border-zinc-200 bg-linear-to-br from-emerald-50 to-white px-4 py-3 dark:border-zinc-800 dark:from-emerald-950/20 dark:to-zinc-900">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-emerald-600">
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div>

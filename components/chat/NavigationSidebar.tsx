@@ -168,18 +168,6 @@ export function NavigationSidebar({
           tenantName={tenantName}
           className="rounded-lg bg-white shadow-sm"
         />
-        <div
-          className="group relative flex shrink-0 cursor-default flex-col items-center gap-1"
-          title={displayName}
-          aria-label={displayName}
-        >
-          <div className="flex size-10 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
-            <span className="text-sm font-bold">{nameInitial}</span>
-          </div>
-          <span className="pointer-events-none absolute left-full top-1/2 z-[60] ml-2 max-w-[14rem] -translate-y-1/2 truncate rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 dark:bg-zinc-700">
-            {displayName}
-          </span>
-        </div>
       </div>
 
       <nav

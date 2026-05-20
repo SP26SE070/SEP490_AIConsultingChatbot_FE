@@ -2,17 +2,21 @@
 
 import { useEffect, useState, useRef, useMemo, FormEvent } from "react";
 import {
-  UserCircleIcon,
-  PencilSquareIcon,
-  KeyIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  MapPinIcon,
-  BuildingOffice2Icon,
-  CalendarDaysIcon,
-  ClockIcon,
-  PhotoIcon,
-} from "@heroicons/react/24/outline";
+  UserCircle,
+  Pencil,
+  Key,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Image,
+  Building,
+  Clock,
+  User,
+} from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { AppLogo } from "@/components/brand/AppLogo";
 import { getStoredUser } from "@/lib/auth-store";
@@ -59,7 +63,6 @@ function onlyDigits(input: string): string {
 function toLocalPhoneDigits(raw: string | null | undefined): string {
   const digits = onlyDigits(raw ?? "");
   if (!digits) return "";
-  // Handle persisted +84xxxxxxxxx values from backend.
   if (digits.startsWith("84")) {
     return digits.slice(2).slice(0, 10);
   }
@@ -69,11 +72,6 @@ function toLocalPhoneDigits(raw: string | null | undefined): string {
 function normalizeVietnamPhoneFromInput(localDigits: string): string | null {
   const digits = onlyDigits(localDigits);
   if (!digits) return null;
-
-  // Accept:
-  // - 10 digits with leading 0 (e.g. 0383450153)
-  // - 9 digits without leading 0 (e.g. 383450153)
-  // - 10 digits without leading 0 (kept as-is)
   if (digits.startsWith("0")) {
     if (digits.length !== 10) return null;
     return `+84${digits.slice(1)}`;
@@ -115,9 +113,7 @@ export default function ProfilePage() {
 
   // Update form state
   const [phoneNumber, setPhoneNumber] = useState("");
-  /** Hiển thị/nhập dd/mm/yyyy; khi gửi API chuyển sang ISO trong handleUpdate */
   const [dateOfBirthDisplay, setDateOfBirthDisplay] = useState("");
-  /** Cảnh báo tuổi: chỉ sau khi user sửa DOB và lần đầu nhập đủ ngày hợp lệ nhưng chưa đủ 18 */
   const [dobUnder18Notice, setDobUnder18Notice] = useState<string | null>(null);
   const dobEditedRef = useRef(false);
   const under18NoticeShownRef = useRef(false);
@@ -136,18 +132,16 @@ export default function ProfilePage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNew, setConfirmNew] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  const [showFirstPasswordDonePrompt, setShowFirstPasswordDonePrompt] =
-    useState(false);
+  const [showFirstPasswordDonePrompt, setShowFirstPasswordDonePrompt] = useState(false);
   const mustChangePassword = currentUser?.mustChangePassword ?? false;
-  const isTenantAdmin = (currentUser?.roles ?? []).some((role) =>
-    role.includes("TENANT_ADMIN")
-  );
-  const isEmployee = (currentUser?.roles ?? []).some((role) =>
-    role.includes("EMPLOYEE")
-  );
+  const isTenantAdmin = (currentUser?.roles ?? []).some((role) => role.includes("TENANT_ADMIN"));
+  const isEmployee = (currentUser?.roles ?? []).some((role) => role.includes("EMPLOYEE"));
 
   // Contact email update (OTP) state
   const [newContactEmail, setNewContactEmail] = useState("");
@@ -165,13 +159,12 @@ export default function ProfilePage() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
 
+  // Active tab
+  const [activeTab, setActiveTab] = useState<"info" | "password" | "email" | "branding">("info");
+
   const prettifyContactEmailError = (message: string) => {
     const m = message || "";
-    if (
-      /PKIX path building failed/i.test(m) ||
-      /SSLHandshakeException/i.test(m) ||
-      /unable to find valid certification path/i.test(m)
-    ) {
+    if (/PKIX path building failed/i.test(m) || /SSLHandshakeException/i.test(m) || /unable to find valid certification path/i.test(m)) {
       return `${t.profileContactEmailErrorTls} ${t.profileContactEmailHelp}`;
     }
     if (/Mail server connection failed/i.test(m) || /MessagingException/i.test(m)) {
@@ -188,9 +181,7 @@ export default function ProfilePage() {
         setDateOfBirthDisplay(isoDateToDdMmYyyy(data.dateOfBirth));
         setAddress(data.address ?? "");
       })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : t.profilePageError)
-      )
+      .catch((err) => setError(err instanceof Error ? err.message : t.profilePageError))
       .finally(() => setLoading(false));
   }, [t.profilePageError]);
 
@@ -226,23 +217,16 @@ export default function ProfilePage() {
     }
     const preview = URL.createObjectURL(logoFile);
     setLogoPreviewUrl(preview);
-    return () => {
-      URL.revokeObjectURL(preview);
-    };
+    return () => { URL.revokeObjectURL(preview); };
   }, [logoFile]);
 
   const openDobPicker = () => {
     dobEditedRef.current = true;
     const el = dobPickerRef.current;
     if (!el) return;
-    const picker = (el as HTMLInputElement & { showPicker?: () => void })
-      .showPicker;
+    const picker = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
     if (typeof picker === "function") {
-      try {
-        picker.call(el);
-      } catch {
-        el.click();
-      }
+      try { picker.call(el); } catch { el.click(); }
     } else {
       el.click();
     }
@@ -256,8 +240,7 @@ export default function ProfilePage() {
     try {
       const dobCheck = validateDobForSubmit(dateOfBirthDisplay, dobMessages);
       if (!dobCheck.ok) {
-        const alreadyShownUnder18 =
-          dobCheck.message === t.profileDobUnder18 && dobUnder18Notice !== null;
+        const alreadyShownUnder18 = dobCheck.message === t.profileDobUnder18 && dobUnder18Notice !== null;
         if (!alreadyShownUnder18) {
           setUpdateError(dobCheck.message);
         }
@@ -291,8 +274,7 @@ export default function ProfilePage() {
 
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
-    const passwordPattern =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^])[A-Za-z\d@$!%*?&#^]{8,}$/;
+    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^])[A-Za-z\d@$!%*?&#^]{8,}$/;
     if (newPassword !== confirmNew) {
       setPasswordError(t.profilePasswordMismatch);
       return;
@@ -318,9 +300,7 @@ export default function ProfilePage() {
         setShowFirstPasswordDonePrompt(true);
       }
     } catch (err) {
-      setPasswordError(
-        err instanceof Error ? err.message : t.profileChangePasswordFailed
-      );
+      setPasswordError(err instanceof Error ? err.message : t.profileChangePasswordFailed);
     } finally {
       setPasswordLoading(false);
     }
@@ -391,14 +371,10 @@ export default function ProfilePage() {
     setLogoUploading(true);
     try {
       const result = await uploadTenantLogo(logoFile);
-      setProfile((prev) =>
-        prev ? { ...prev, tenantLogoUrl: result.logoUrl ?? prev.tenantLogoUrl } : prev
-      );
+      setProfile((prev) => prev ? { ...prev, tenantLogoUrl: result.logoUrl ?? prev.tenantLogoUrl } : prev);
       setLogoSuccess(t.profileTenantLogoSuccess);
       setLogoFile(null);
-      if (logoInputRef.current) {
-        logoInputRef.current.value = "";
-      }
+      if (logoInputRef.current) logoInputRef.current.value = "";
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : t.profileUpdateFailed);
     } finally {
@@ -406,25 +382,26 @@ export default function ProfilePage() {
     }
   };
 
-  const inputClass =
-    "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus:border-violet-400 dark:focus:ring-violet-400/30";
-  /** Một viền: text + icon lịch cuối dòng */
-  const dobCompositeClass =
-    "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus-within:border-violet-400 dark:focus-within:ring-violet-400/30";
-  const labelClass =
-    "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+  const inputClass = "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30";
+  const dobCompositeClass = "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus-within:border-emerald-400 dark:focus-within:ring-emerald-400/30";
+  const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
   const logoDisplayUrl = logoPreviewUrl ?? profile?.tenantLogoUrl ?? null;
+
+  const tabs = [
+    { id: "info" as const, label: t.profilePersonalInformation, icon: User },
+    { id: "password" as const, label: t.profileChangePasswordTitle, icon: Key },
+    { id: "email" as const, label: t.profileUpdateContactEmail, icon: Mail },
+    ...(isTenantAdmin ? [{ id: "branding" as const, label: t.profileTenantBrandingTitle, icon: Image }] : []),
+  ];
 
   if (loading) {
     return (
-      <div className="min-h-dvh overflow-x-hidden bg-white dark:bg-zinc-950">
+      <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 to-emerald-50 dark:from-zinc-950 dark:to-zinc-900">
         <AppHeader />
         <main className="flex flex-1 items-center justify-center px-6 py-10">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-              {t.profilePageLoading}
-            </p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{t.profilePageLoading}</p>
           </div>
         </main>
       </div>
@@ -433,7 +410,7 @@ export default function ProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-dvh overflow-x-hidden bg-white dark:bg-zinc-950">
+      <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 to-emerald-50 dark:from-zinc-950 dark:to-zinc-900">
         <AppHeader />
         <main className="flex flex-1 items-center justify-center px-6 py-10">
           <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-6 py-4 text-rose-800 shadow-lg dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
@@ -445,225 +422,378 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-white dark:bg-zinc-950">
+    <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 via-white to-emerald-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-emerald-950/20">
       <AppHeader />
       <main className="min-w-0 overflow-auto">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Hero */}
-        <div className="mb-6">
-          <div className="min-w-0 overflow-hidden rounded-2xl bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500 p-5 text-white shadow-lg shadow-emerald-500/20 dark:shadow-emerald-900/25">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
-                <UserCircleIcon className="h-8 w-8" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                  {profile.fullName || t.profile}
-                </h1>
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-white/90">
-                  <EnvelopeIcon className="h-3.5 w-3.5" />
-                  {profile.email}
-                </p>
-                {profile.roleName && (
-                  <span className="mt-1.5 inline-block rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium">
-                    {profile.roleName}
-                  </span>
-                )}
-              </div>
+          {/* Compact Profile Header */}
+          <div className="mb-6 flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-800/80">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-md">
+              <UserCircle className="h-7 w-7 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                {profile.fullName || t.profile}
+              </h1>
+              <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                {profile.email}
+              </p>
+            </div>
+            {profile.roleName && (
+              <span className="hidden shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 sm:flex">
+                <ShieldCheck className="h-3 w-3" />
+                {profile.roleName}
+              </span>
+            )}
+          </div>
+
+          {/* Tabs */}
+          <div className="mb-6 overflow-x-auto">
+            <div className="flex gap-1 rounded-xl bg-white/80 p-1 shadow-sm backdrop-blur-sm dark:bg-zinc-800/80">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "bg-emerald-500 text-white shadow-sm"
+                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  <span className="hidden xs:inline">{tab.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Cards row */}
-          <div className="grid gap-4 lg:grid-cols-4">
-            {/* Personal info — emerald */}
-            <section className="h-full rounded-xl border-l-4 border-emerald-500 bg-white p-4 shadow-md shadow-emerald-500/10 dark:border-emerald-400 dark:bg-zinc-900/80 dark:shadow-emerald-900/20">
-              <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
-                  <UserCircleIcon className="h-4 w-4" />
-                </span>
-                {t.profilePersonalInformation}
-              </h2>
-              <dl className="space-y-3 text-sm">
-                {[
-                  { icon: EnvelopeIcon, label: t.email, value: profile.email },
-                  { icon: EnvelopeIcon, label: t.contactEmail, value: profile.contactEmail ?? "—" },
-                  { icon: UserCircleIcon, label: t.fullName, value: profile.fullName },
-                  { icon: PhoneIcon, label: t.phone, value: profile.phoneNumber ?? "—" },
-                  {
-                    icon: CalendarDaysIcon,
-                    label: t.profileDateOfBirth,
-                    value: formatDobDisplay(profile.dateOfBirth),
-                  },
-                  { icon: MapPinIcon, label: t.address, value: profile.address ?? "—" },
-                  { icon: BuildingOffice2Icon, label: t.role, value: profile.roleName ?? "—" },
-                  {
-                    icon: BuildingOffice2Icon,
-                    label: t.department,
-                    value: profile.departmentName ?? "—",
-                  },
-                  { icon: BuildingOffice2Icon, label: t.tenant, value: profile.tenantName ?? "—" },
-                  {
-                    icon: ClockIcon,
-                    label: t.profileLastLogin,
-                    value: formatDateTime(profile.lastLoginAt, dateLocale),
-                  },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex gap-2">
-                    <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />
-                    <div>
-                      <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
-                      <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
-                    </div>
-                  </div>
-                ))}
-              </dl>
-            </section>
-
-            {/* Update profile — violet */}
-            <section className="h-full rounded-xl border-l-4 border-violet-500 bg-white p-4 shadow-md shadow-violet-500/10 dark:border-violet-400 dark:bg-zinc-900/80 dark:shadow-violet-900/20">
-              <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400">
-                  <PencilSquareIcon className="h-4 w-4" />
-                </span>
-                {t.profileUpdateProfile}
-              </h2>
-              <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-                {t.profileUpdateProfileHint}
-              </p>
-              <form onSubmit={handleUpdate} className="space-y-3">
-                {updateError && (
-                  <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
-                    {updateError}
-                  </p>
-                )}
-                {updateSuccess && (
-                  <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                    {t.profileUpdatedSuccessfully}
-                  </p>
-                )}
-                <div>
-                  <label htmlFor="phone" className={labelClass}>
-                    {t.phone}
-                  </label>
-                  <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/80">
-                    <span className="inline-flex items-center border-r border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                      +84
+          {/* Tab Content */}
+          <div className="rounded-2xl bg-white p-6 shadow-lg dark:bg-zinc-900/80">
+            {/* Info Tab */}
+            {activeTab === "info" && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Personal Info Card */}
+                <section className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50">
+                  <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
+                      <User className="h-4 w-4" />
                     </span>
-                    <input
-                      id="phone"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={10}
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(onlyDigits(e.target.value).slice(0, 10))}
-                      placeholder="0123456789"
-                      className="block w-full border-0 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none dark:text-zinc-100"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="dob" className={labelClass}>
-                    {t.profileDateOfBirth}
-                  </label>
-                  <div className={dobCompositeClass}>
-                    <input
-                      id="dob"
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="bday"
-                      placeholder={t.profileDobPlaceholder}
-                      maxLength={10}
-                      value={dateOfBirthDisplay}
-                      onChange={(e) => {
-                        dobEditedRef.current = true;
-                        setDateOfBirthDisplay(formatDobDigitsInput(e.target.value));
-                      }}
-                      className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 outline-none focus:ring-0 dark:bg-transparent"
-                    />
-                    <input
-                      ref={dobPickerRef}
-                      type="date"
-                      className="sr-only"
-                      tabIndex={-1}
-                      aria-hidden
-                      value={dobPickerIsoValue}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        dobEditedRef.current = true;
-                        if (v) setDateOfBirthDisplay(isoDateToDdMmYyyy(v));
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={openDobPicker}
-                      className="flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
-                      title={t.profileDobPickFromCalendar}
-                      aria-label={t.profileDobOpenCalendar}
-                    >
-                      <CalendarDaysIcon className="h-5 w-5" aria-hidden />
-                    </button>
-                  </div>
-                  {dobUnder18Notice && (
-                    <div
-                      className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
-                      role="alert"
-                    >
-                      {dobUnder18Notice}
+                    {t.profilePersonalInformation}
+                  </h2>
+                  <dl className="space-y-3 text-sm">
+                    {[
+                      { icon: Mail, label: t.email, value: profile.email },
+                      { icon: Mail, label: t.contactEmail, value: profile.contactEmail ?? "—" },
+                      { icon: User, label: t.fullName, value: profile.fullName },
+                      { icon: Phone, label: t.phone, value: profile.phoneNumber ?? "—" },
+                      { icon: Calendar, label: t.profileDateOfBirth, value: formatDobDisplay(profile.dateOfBirth) },
+                      { icon: MapPin, label: t.address, value: profile.address ?? "—" },
+                      { icon: ShieldCheck, label: t.role, value: profile.roleName ?? "—" },
+                      { icon: Building, label: t.department, value: profile.departmentName ?? "—" },
+                      { icon: Building, label: t.tenant, value: profile.tenantName ?? "—" },
+                      { icon: Clock, label: t.profileLastLogin, value: formatDateTime(profile.lastLoginAt, dateLocale) },
+                    ].map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="flex gap-3">
+                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                        <div>
+                          <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+                          <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
+                        </div>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+
+                {/* Update Form Card */}
+                <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-5 dark:border-violet-800 dark:bg-violet-950/20">
+                  <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400">
+                      <Pencil className="h-4 w-4" />
+                    </span>
+                    {t.profileUpdateProfile}
+                  </h2>
+                  <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileUpdateProfileHint}</p>
+
+                  <form onSubmit={handleUpdate} className="space-y-4">
+                    {updateError && (
+                      <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{updateError}</p>
+                    )}
+                    {updateSuccess && (
+                      <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profileUpdatedSuccessfully}</p>
+                    )}
+
+                    <div>
+                      <label htmlFor="phone" className={labelClass}>{t.phone}</label>
+                      <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/80">
+                        <span className="inline-flex items-center border-r border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">+84</span>
+                        <input
+                          id="phone"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(onlyDigits(e.target.value).slice(0, 10))}
+                          placeholder="0123456789"
+                          className="block w-full border-0 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none dark:bg-zinc-800/80 dark:text-zinc-100"
+                        />
+                      </div>
                     </div>
+
+                    <div>
+                      <label htmlFor="dob" className={labelClass}>{t.profileDateOfBirth}</label>
+                      <div className={dobCompositeClass}>
+                        <input
+                          id="dob"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="bday"
+                          placeholder={t.profileDobPlaceholder}
+                          maxLength={10}
+                          value={dateOfBirthDisplay}
+                          onChange={(e) => {
+                            dobEditedRef.current = true;
+                            setDateOfBirthDisplay(formatDobDigitsInput(e.target.value));
+                          }}
+                          className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 outline-none focus:ring-0 dark:bg-transparent dark:text-zinc-100"
+                        />
+                        <input
+                          ref={dobPickerRef}
+                          type="date"
+                          className="sr-only"
+                          tabIndex={-1}
+                          aria-hidden
+                          value={dobPickerIsoValue}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            dobEditedRef.current = true;
+                            if (v) setDateOfBirthDisplay(isoDateToDdMmYyyy(v));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={openDobPicker}
+                          className="flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
+                          title={t.profileDobPickFromCalendar}
+                          aria-label={t.profileDobOpenCalendar}
+                        >
+                          <Calendar className="h-5 w-5" aria-hidden />
+                        </button>
+                      </div>
+                      {dobUnder18Notice && (
+                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" role="alert">
+                          {dobUnder18Notice}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="address" className={labelClass}>{t.address}</label>
+                      <textarea id="address" rows={3} maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={updateLoading}
+                      className="w-full rounded-xl bg-linear-to-r from-violet-500 to-purple-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-600 hover:to-purple-600 disabled:opacity-60"
+                    >
+                      {updateLoading ? t.profileSaving : t.profileSaveChanges}
+                    </button>
+                  </form>
+                </section>
+              </div>
+            )}
+
+            {/* Password Tab */}
+            {activeTab === "password" && (
+              <div className="mx-auto max-w-lg">
+                <div className="mb-6 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400">
+                    <Key className="h-7 w-7" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t.profileChangePasswordTitle}</h2>
+                  {mustChangePassword && (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{t.profileFirstLoginPasswordHint}</p>
                   )}
                 </div>
-                <div>
-                  <label htmlFor="address" className={labelClass}>
-                    {t.address}
-                  </label>
-                  <textarea id="address" rows={3} maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
-                </div>
-                <button
-                  type="submit"
-                  disabled={updateLoading}
-                  className="w-full rounded-xl bg-linear-to-r from-violet-500 to-purple-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-600 hover:to-purple-600 disabled:opacity-60"
-                >
-                  {updateLoading ? t.profileSaving : t.profileSaveChanges}
-                </button>
-              </form>
-            </section>
 
-            {isTenantAdmin ? (
-              <section className="h-full rounded-xl border-l-4 border-indigo-500 bg-white p-4 shadow-md shadow-indigo-500/10 dark:border-indigo-400 dark:bg-zinc-900/80 dark:shadow-indigo-900/20">
-                <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400">
-                    <PhotoIcon className="h-4 w-4" />
-                  </span>
-                  {t.profileTenantBrandingTitle}
-                </h2>
-                <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-                  {t.profileTenantBrandingHint}
-                </p>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  {passwordError && (
+                    <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{passwordError}</p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profilePasswordUpdatedSuccess}</p>
+                  )}
+
+                  {!mustChangePassword && (
+                    <div>
+                      <label htmlFor="oldPassword" className={labelClass}>{t.profileCurrentPasswordLabel}</label>
+                      <div className="relative">
+                        <input
+                          id="oldPassword"
+                          type={showOldPassword ? "text" : "password"}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 pr-10 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                        >
+                          {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="newPassword" className={labelClass}>{t.profileNewPasswordLabel}</label>
+                    <div className="relative">
+                      <input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 pr-10 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmNew" className={labelClass}>{t.profileConfirmPasswordLabel}</label>
+                    <div className="relative">
+                      <input
+                        id="confirmNew"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmNew}
+                        onChange={(e) => setConfirmNew(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-2.5 pr-10 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="w-full rounded-xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-orange-600 disabled:opacity-60"
+                  >
+                    {passwordLoading ? t.profileUpdatingPassword : t.profileChangePasswordButton}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Email Tab */}
+            {activeTab === "email" && (
+              <div className="mx-auto max-w-lg">
+                <div className="mb-6 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-600 dark:bg-cyan-900/50 dark:text-cyan-400">
+                    <Mail className="h-7 w-7" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t.profileUpdateContactEmail}</h2>
+                  <p className="mt-1 text-xs text-zinc-500">{t.profileUpdateContactEmailHint}</p>
+                </div>
+
+                <form onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp} className="space-y-4">
+                  {contactError && (
+                    <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{contactError}</p>
+                  )}
+                  {contactSuccess && (
+                    <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{contactSuccess}</p>
+                  )}
+
+                  <div>
+                    <label htmlFor="newContactEmail" className={labelClass}>{t.profileNewContactEmailLabel}</label>
+                    <input
+                      id="newContactEmail"
+                      type="email"
+                      value={newContactEmail}
+                      onChange={(e) => setNewContactEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="email@example.com"
+                      required
+                    />
+                  </div>
+
+                  {otpSent && (
+                    <div>
+                      <label htmlFor="otp" className={labelClass}>{t.profileOtpSixDigits}</label>
+                      <input
+                        id="otp"
+                        type="text"
+                        inputMode="numeric"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                        placeholder="123456"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={contactLoading}
+                    className="w-full rounded-xl bg-linear-to-r from-cyan-500 to-sky-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-600 hover:to-sky-600 disabled:opacity-60"
+                  >
+                    {contactLoading ? t.profileProcessing : otpSent ? t.profileVerifyOtpUpdate : t.profileSendOtp}
+                  </button>
+
+                  {otpSent && (
+                    <button
+                      type="button"
+                      onClick={() => { setOtpSent(false); setOtp(""); setContactSuccess(null); setContactError(null); }}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      {t.profileResendOrChangeEmail}
+                    </button>
+                  )}
+                </form>
+              </div>
+            )}
+
+            {/* Branding Tab */}
+            {activeTab === "branding" && isTenantAdmin && (
+              <div className="mx-auto max-w-lg">
+                <div className="mb-6 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
+                    <Image className="h-7 w-7" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t.profileTenantBrandingTitle}</h2>
+                  <p className="mt-1 text-xs text-zinc-500">{t.profileTenantBrandingHint}</p>
+                </div>
 
                 {logoError && (
-                  <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
-                    {logoError}
-                  </p>
+                  <p className="mb-4 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{logoError}</p>
                 )}
                 {logoSuccess && (
-                  <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                    {logoSuccess}
-                  </p>
+                  <p className="mb-4 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{logoSuccess}</p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-zinc-200 bg-white/80 p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/70">
-                    <AppLogo
-                      size={48}
-                      tenantLogoUrl={logoDisplayUrl}
-                      tenantName={profile.tenantName}
-                    />
+                    <AppLogo size={48} tenantLogoUrl={logoDisplayUrl} tenantName={profile.tenantName} />
                   </div>
-                  <div className="min-w-[14rem] flex-1">
-                    <label htmlFor="tenantLogo" className={labelClass}>
-                      {t.profileTenantLogoLabel}
-                    </label>
+                  <div className="min-w-56 flex-1">
+                    <label htmlFor="tenantLogo" className={labelClass}>{t.profileTenantLogoLabel}</label>
                     <input
                       id="tenantLogo"
                       ref={logoInputRef}
@@ -672,13 +802,9 @@ export default function ProfilePage() {
                       onChange={handleLogoFileChange}
                       className={inputClass}
                     />
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      {t.profileTenantLogoNote}
-                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{t.profileTenantLogoNote}</p>
                     {logoFile && (
-                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                        {t.profileTenantLogoSelected}: {logoFile.name} - {formatBytes(logoFile.size)}
-                      </p>
+                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t.profileTenantLogoSelected}: {logoFile.name} - {formatBytes(logoFile.size)}</p>
                     )}
                   </div>
                 </div>
@@ -691,164 +817,19 @@ export default function ProfilePage() {
                 >
                   {logoUploading ? t.profileTenantLogoUploading : t.profileTenantLogoUpload}
                 </button>
-              </section>
-            ) : null}
-
-            {/* Contact email (OTP) — cyan */}
-            <section className="h-full rounded-xl border-l-4 border-cyan-500 bg-white p-4 shadow-md shadow-cyan-500/10 dark:border-cyan-400 dark:bg-zinc-900/80 dark:shadow-cyan-900/20">
-              <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400">
-                  <EnvelopeIcon className="h-4 w-4" />
-                </span>
-                {t.profileUpdateContactEmail}
-              </h2>
-              <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
-                {t.profileUpdateContactEmailHint}
-              </p>
-              {contactError && (
-                <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
-                  {contactError}
-                </p>
-              )}
-              {contactSuccess && (
-                <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                  {contactSuccess}
-                </p>
-              )}
-              <form onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp} className="space-y-3">
-                <div>
-                  <label htmlFor="newContactEmail" className={labelClass}>
-                    {t.profileNewContactEmailLabel}
-                  </label>
-                  <input
-                    id="newContactEmail"
-                    type="email"
-                    value={newContactEmail}
-                    onChange={(e) => setNewContactEmail(e.target.value)}
-                    className={inputClass}
-                    placeholder="email@example.com"
-                    required
-                  />
-                </div>
-                {otpSent && (
-                  <div>
-                    <label htmlFor="otp" className={labelClass}>
-                      {t.profileOtpSixDigits}
-                    </label>
-                    <input
-                      id="otp"
-                      type="text"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className={inputClass}
-                      placeholder="123456"
-                      maxLength={6}
-                      required
-                    />
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  disabled={contactLoading}
-                  className="w-full rounded-xl bg-linear-to-r from-cyan-500 to-sky-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-600 hover:to-sky-600 disabled:opacity-60"
-                >
-                  {contactLoading
-                    ? t.profileProcessing
-                    : otpSent
-                      ? t.profileVerifyOtpUpdate
-                      : t.profileSendOtp}
-                </button>
-                {otpSent && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtpSent(false);
-                      setOtp("");
-                      setContactSuccess(null);
-                      setContactError(null);
-                    }}
-                    className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  >
-                    {t.profileResendOrChangeEmail}
-                  </button>
-                )}
-              </form>
-            </section>
-
-            {/* Change password — amber */}
-            <section className="h-full rounded-xl border-l-4 border-amber-500 bg-white p-4 shadow-md shadow-amber-500/10 dark:border-amber-400 dark:bg-zinc-900/80 dark:shadow-amber-900/20">
-              <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400">
-                  <KeyIcon className="h-4 w-4" />
-                </span>
-                {t.profileChangePasswordTitle}
-              </h2>
-              {mustChangePassword && (
-                <p className="mb-3 text-xs text-amber-700 dark:text-amber-300">
-                  {t.profileFirstLoginPasswordHint}
-                </p>
-              )}
-              <form onSubmit={handleChangePassword} className="space-y-3">
-                {passwordError && (
-                  <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
-                    {passwordError}
-                  </p>
-                )}
-                {passwordSuccess && (
-                  <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                    {t.profilePasswordUpdatedSuccess}
-                  </p>
-                )}
-                {!mustChangePassword && (
-                  <div>
-                    <label htmlFor="oldPassword" className={labelClass}>
-                      {t.profileCurrentPasswordLabel}
-                    </label>
-                    <input id="oldPassword" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className={inputClass} />
-                  </div>
-                )}
-                <div>
-                  <label htmlFor="newPassword" className={labelClass}>
-                    {t.profileNewPasswordLabel}
-                  </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="confirmNew" className={labelClass}>
-                    {t.profileConfirmPasswordLabel}
-                  </label>
-                  <input id="confirmNew" type="password" value={confirmNew} onChange={(e) => setConfirmNew(e.target.value)} className={inputClass} />
-                </div>
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="w-full rounded-xl bg-linear-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-orange-600 disabled:opacity-60"
-                >
-                  {passwordLoading
-                    ? t.profileUpdatingPassword
-                    : t.profileChangePasswordButton}
-                </button>
-              </form>
-            </section>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
+      {/* First Password Done Prompt Modal */}
       {showFirstPasswordDonePrompt && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-zinc-900/70" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-zinc-900/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              {language === "en"
-                ? "Password updated successfully"
-                : "Đổi mật khẩu thành công"}
+              {language === "en" ? "Password updated successfully" : "Đổi mật khẩu thành công"}
             </h3>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
               {isTenantAdmin
@@ -875,11 +856,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => {
                   setShowFirstPasswordDonePrompt(false);
-                  const destination = isTenantAdmin
-                    ? "/tenant-admin"
-                    : isEmployee
-                      ? "/chatbot-new"
-                      : roleToPath(currentUser?.roles ?? []);
+                  const destination = isTenantAdmin ? "/tenant-admin" : isEmployee ? "/chatbot-new" : roleToPath(currentUser?.roles ?? []);
                   router.push(destination);
                   router.refresh();
                 }}
