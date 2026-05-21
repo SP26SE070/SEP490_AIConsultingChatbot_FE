@@ -20,7 +20,8 @@ import {
   Key,
   Shield,
   MoreVertical,
-  Trash2
+  Trash2,
+  Check
 } from "lucide-react";
 import { 
   getTenantUsers, 
@@ -81,6 +82,7 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
   const [permissionUser, setPermissionUser] = useState<UserResponse | null>(null);
   const [availablePermissions, setAvailablePermissions] = useState<{ code: string; name?: string }[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [permissionMetaLoading, setPermissionMetaLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -314,15 +316,29 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
     setMenuPos(null);
     setPermissionMetaLoading(true);
     try {
-      const [userDetail, permissions] = await Promise.all([
+      const [userDetail, permissions, rolesData] = await Promise.all([
         getTenantUserById(userId),
         getTenantAvailablePermissions(),
+        getTenantRoles(),
       ]);
-      const currentPermissions =
-        ((userDetail as unknown as { permissions?: string[] }).permissions ?? []).filter(Boolean);
+
+      // Get role permissions (these are read-only)
+      const userRolePermissions: string[] = [];
+      if (userDetail.roleId) {
+        const userRole = rolesData.find((r) => r.id === userDetail.roleId);
+        if (userRole?.permissions) {
+          userRolePermissions.push(...userRole.permissions);
+        }
+      }
+
+      // Combine role permissions with user's direct permissions
+      const userDirectPermissions = ((userDetail as unknown as { permissions?: string[] }).permissions ?? []).filter(Boolean);
+      const allSelectedPermissions = [...new Set([...userRolePermissions, ...userDirectPermissions])];
+
       setPermissionUser(userDetail);
       setAvailablePermissions(permissions);
-      setSelectedPermissions(currentPermissions);
+      setSelectedPermissions(allSelectedPermissions);
+      setRolePermissions(userRolePermissions);
     } catch (e) {
       onActionError?.(e instanceof Error ? e.message : (isEn ? "Failed to load permissions" : "Không thể tải quyền"));
     } finally {
@@ -542,7 +558,7 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
                     {/* Employee Info */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-semibold text-white">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-cyan-500 text-sm font-semibold text-white">
                           {getInitials(employee.fullName ?? employee.email ?? "")}
                         </div>
                         <div className="min-w-0">
@@ -744,6 +760,7 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
           permissions={availablePermissions}
           selected={selectedPermissions}
           setSelected={setSelectedPermissions}
+          rolePermissions={rolePermissions}
           loading={permissionMetaLoading || actionLoading === permissionUser.id}
           onClose={() => setPermissionUser(null)}
           onSave={handleSavePermissions}
@@ -767,7 +784,7 @@ function DetailModal({ user, onClose }: { user: UserResponse; onClose: () => voi
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
-        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-emerald-500 to-cyan-600 px-6 py-8">
+        <div className="relative overflow-hidden rounded-t-3xl bg-linear-to-br from-emerald-500 to-cyan-600 px-6 py-8">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -1097,6 +1114,7 @@ function UpdatePermissionsModal({
   permissions,
   selected,
   setSelected,
+  rolePermissions,
   loading,
   onClose,
   onSave,
@@ -1105,6 +1123,7 @@ function UpdatePermissionsModal({
   permissions: { code: string; name?: string }[];
   selected: string[];
   setSelected: (next: string[]) => void;
+  rolePermissions: string[];
   loading: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -1113,9 +1132,15 @@ function UpdatePermissionsModal({
   const t = translations[language];
   const isEn = language === "en";
 
+  const role = user.roleName;
+
   const togglePermission = (code: string) => {
+    // Don't allow toggling role permissions
+    if (rolePermissions.includes(code)) return;
     setSelected(selected.includes(code) ? selected.filter((p) => p !== code) : [...selected, code]);
   };
+
+  const isRolePermission = (code: string) => rolePermissions.includes(code);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1125,7 +1150,12 @@ function UpdatePermissionsModal({
           <div>
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateUserPermissions}</h3>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {(user.fullName ?? user.email ?? "User")} - {t.selectPermissions}
+              {user.fullName ?? user.email ?? "User"}
+              {role && (
+                <span className="ml-2 inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                  {role}
+                </span>
+              )}
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-300">
@@ -1133,38 +1163,89 @@ function UpdatePermissionsModal({
           </button>
         </div>
 
-        <div className="mt-4 max-h-[52vh] overflow-y-auto rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-          {permissions.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t.noPermissions}</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {permissions.map((p) => {
-                const active = selected.includes(p.code);
-                return (
-                  <button
-                    key={p.code}
-                    type="button"
-                    onClick={() => togglePermission(p.code)}
-                    className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-                      active
-                        ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    }`}
-                  >
-                    <div className="font-medium">
-                      {getPermissionLabel(p.code, p.name, isEn ? "en" : "vi")}
-                    </div>
-                    <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-70">{p.code}</div>
-                  </button>
-                );
-              })}
+        {rolePermissions.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              {isEn ? "Permissions from role (read-only)" : "Quyền từ vai trò (chỉ đọc)"}
+            </p>
+            <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+              {rolePermissions.map((code) => (
+                <span
+                  key={code}
+                  className="inline-flex items-center gap-1 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700 dark:border-cyan-900/60 dark:bg-cyan-950/30 dark:text-cyan-300"
+                >
+                  <Check className="h-3 w-3" />
+                  {getPermissionLabel(code, undefined, isEn ? "en" : "vi")}
+                </span>
+              ))}
             </div>
-          )}
+          </div>
+        )}
+
+        <div className="mt-4">
+          <p className="mb-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            {isEn ? "Additional permissions (editable)" : "Quyền bổ sung (có thể chỉnh sửa)"}
+          </p>
+          <div className="max-h-[40vh] overflow-y-auto rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+            {permissions.length === 0 ? (
+              <p className="text-sm text-zinc-500">{t.noPermissions}</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {permissions.map((p) => {
+                  const active = selected.includes(p.code);
+                  const isRole = isRolePermission(p.code);
+                  return (
+                    <button
+                      key={p.code}
+                      type="button"
+                      onClick={() => togglePermission(p.code)}
+                      disabled={isRole}
+                      className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
+                        isRole
+                          ? "cursor-default border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-800 dark:bg-cyan-950/30 dark:text-cyan-300"
+                          : active
+                            ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                          isRole
+                            ? "border-cyan-400 bg-cyan-400"
+                            : active
+                              ? "border-emerald-500 bg-emerald-500"
+                              : "border-zinc-300 bg-white dark:border-zinc-600 dark:bg-zinc-900"
+                        }`}>
+                          {active && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium">
+                            {getPermissionLabel(p.code, p.name, isEn ? "en" : "vi")}
+                          </div>
+                          <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-70">{p.code}</div>
+                        </div>
+                        {isRole && (
+                          <span className="shrink-0 rounded bg-cyan-200 px-1.5 py-0.5 text-[10px] font-medium text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-300">
+                            {isEn ? "Role" : "Vai trò"}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-5 flex items-center justify-between">
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {isEn ? "Selected" : "Đã chọn"}: {selected.length}
+            {rolePermissions.length > 0 && (
+              <span className="ml-1">
+                ({rolePermissions.length} {isEn ? "from role" : "từ vai trò"})
+              </span>
+            )}
           </span>
           <div className="flex gap-2">
             <button
