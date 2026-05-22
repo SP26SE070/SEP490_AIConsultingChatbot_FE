@@ -857,6 +857,41 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
               ))}
             </select>
           </div>
+          
+          {/* Minimum Role Level - Always visible */}
+          <div>
+            <label className="mb-1 flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {isEn ? "Minimum role level (1–5)" : "Mức tối thiểu để xem (1–5)"}
+              <span 
+                className="cursor-help text-xs text-zinc-500" 
+                title={isEn 
+                  ? "Only users with level <= this value can view this document" 
+                  : "Chỉ user level <= giá trị này mới xem được"}
+              >
+                ⓘ
+              </span>
+            </label>
+            <select
+              value={uploadMinimumRoleLevel}
+              onChange={(e) => setUploadMinimumRoleLevel(Number(e.target.value))}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              {[1, 2, 3, 4, 5].map((lv) => (
+                <option key={lv} value={lv}>
+                  {lv}
+                  {isEn
+                    ? [" — Executive", " — Management", " — Senior", " — Employee", " — Intern / External"][lv - 1]
+                    : [" — Điều hành", " — Quản lý", " — Senior", " — Nhân viên", " — Thực tập / bên ngoài"][lv - 1]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-500">
+              {isEn
+                ? "User level X only sees documents/chunks where this value >= X."
+                : "User level X chỉ thấy tài liệu/chunk khi giá trị này >= X."}
+            </p>
+          </div>
+          
           {(uploadVisibility === "SPECIFIC_DEPARTMENTS" || uploadVisibility === "SPECIFIC_DEPARTMENTS_AND_ROLES") && (
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -945,32 +980,46 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
               </p>
             </div>
           )}
-          {(uploadVisibility === "COMPANY_WIDE" || uploadVisibility === "SPECIFIC_DEPARTMENTS") && (
+          
+          {(uploadVisibility === "SPECIFIC_DEPARTMENTS" || uploadVisibility === "SPECIFIC_DEPARTMENTS_AND_ROLES") && (
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                {isEn ? "Minimum role level (1–5)" : "Mức tối thiểu để xem (1–5)"}
+                {t.selectDepartments}
               </label>
-              <select
-                value={uploadMinimumRoleLevel}
-                onChange={(e) => setUploadMinimumRoleLevel(Number(e.target.value))}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              >
-                {[1, 2, 3, 4, 5].map((lv) => (
-                  <option key={lv} value={lv}>
-                    {lv}
-                    {isEn
-                      ? [" — Executive", " — Management", " — Senior", " — Employee", " — Intern / External"][lv - 1]
-                      : [" — Điều hành", " — Quản lý", " — Senior", " — Nhân viên", " — Thực tập / bên ngoài"][lv - 1]}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-zinc-500">
-                {isEn
-                  ? "User level X only sees documents/chunks where this value >= X."
-                  : "User level X chỉ thấy tài liệu/chunk khi giá trị này >= X."}
+              <div className="flex flex-wrap gap-2 rounded-lg border border-zinc-300 bg-white p-2 dark:border-zinc-700 dark:bg-zinc-900">
+                {departments.length === 0 ? (
+                  <span className="px-2 py-1 text-xs text-zinc-500">{isEn ? "No active departments." : "Chưa có phòng ban đang hoạt động."}</span>
+                ) : (
+                  departments.map((d) => {
+                    const active = selectedDepartmentIds.includes(d.id);
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDepartmentIds((prev) =>
+                            prev.includes(d.id) ? prev.filter((x) => x !== d.id) : [...prev, d.id]
+                          );
+                        }}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                          active
+                            ? "bg-green-500 text-white shadow-sm shadow-green-500/30"
+                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        }`}
+                        title={d.name ?? String(d.id)}
+                      >
+                        {d.name ?? d.code ?? d.id}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {t.selected}: {selectedDepartmentIds.length}
               </p>
             </div>
           )}
+          
           <div className="sticky bottom-0 z-10 mt-2 rounded-xl border border-zinc-200 bg-white/95 p-2 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-950/95">
             <Button type="submit" variant="primary" size="md" disabled={uploading} className="w-full">
               <Upload className="mr-2 h-4 w-4" />
@@ -982,8 +1031,8 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
       )}
 
       {(mode === "all" || mode === "library") && (
-      <>
-      {/* Modern Search Section */}
+        <>
+          {/* Modern Search Section */}
       <div className="space-y-4">
         {/* Prominent Search Bar */}
         <div className="relative">

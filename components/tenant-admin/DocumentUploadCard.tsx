@@ -21,6 +21,7 @@ interface DocumentUploadCardProps {
     visibility: DocumentVisibility;
     departmentIds: number[];
     roleIds: number[];
+    minimumRoleLevel: number;
   }) => Promise<void>;
   onUploadNewVersion?: (data: {
     documentId: string;
@@ -76,6 +77,7 @@ export function DocumentUploadCard({
   const [visibility, setVisibility] = useState<DocumentVisibility>("COMPANY_WIDE");
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<number[]>([]);
   const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [minimumRoleLevel, setMinimumRoleLevel] = useState(4); // Default: Employee
   const [error, setError] = useState<string | null>(null);
   const [duplicateInfo, setDuplicateInfo] = useState<{
     existingDocumentId: string;
@@ -219,6 +221,7 @@ export function DocumentUploadCard({
         visibility,
         departmentIds: selectedDepartmentIds,
         roleIds: selectedRoleIds,
+        minimumRoleLevel,
       });
 
       // Reset form
@@ -229,6 +232,7 @@ export function DocumentUploadCard({
       setVisibility("COMPANY_WIDE");
       setSelectedDepartmentIds([]);
       setSelectedRoleIds([]);
+      setMinimumRoleLevel(4);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -266,6 +270,7 @@ export function DocumentUploadCard({
       setVisibility("COMPANY_WIDE");
       setSelectedDepartmentIds([]);
       setSelectedRoleIds([]);
+      setMinimumRoleLevel(4);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -452,6 +457,26 @@ export function DocumentUploadCard({
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Minimum Role Level */}
+            <div className="mt-6">
+              <label className="mb-2 block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                {isEn ? "Level" : "Cấp bậc"}
+              </label>
+              <select
+                value={minimumRoleLevel}
+                onChange={(e) => setMinimumRoleLevel(Number(e.target.value))}
+                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 transition-colors focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              >
+                {[1, 2, 3, 4, 5].map((lv) => (
+                  <option key={lv} value={lv}>
+                    {isEn
+                      ? `Level ${lv} — ${["Executive (CEO, Giám đốc)", "Management (Manager, Trưởng phòng)", "Senior (Team Lead, Senior)", "Employee (Nhân viên)", "Intern (Thực tập)"][lv - 1]}`
+                      : `Level ${lv} — ${["Executive (CEO, Giám đốc)", "Management (Manager, Trưởng phòng)", "Senior (Team Lead, Senior)", "Employee (Nhân viên)", "Intern (Thực tập)"][lv - 1]}`}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Description */}
