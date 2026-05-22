@@ -29,7 +29,12 @@ import {
   requestUpdateContactEmail,
   verifyAndUpdateContactEmail,
 } from "@/lib/api/profile";
-import { uploadTenantLogo } from "@/lib/api/tenant-admin";
+import {
+  getTenantInfo,
+  updateTenantProfile,
+  uploadTenantLogo,
+  type TenantInfoResponse,
+} from "@/lib/api/tenant-admin";
 import type {
   UserProfileResponse,
   UpdateProfileRequest,
@@ -159,8 +164,18 @@ export default function ProfilePage() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
 
+  // Tenant info state (tenant admin only)
+  const [tenantInfo, setTenantInfo] = useState<TenantInfoResponse | null>(null);
+  const [tenantInfoLoading, setTenantInfoLoading] = useState(false);
+  const [tenantInfoSaving, setTenantInfoSaving] = useState(false);
+  const [tenantInfoError, setTenantInfoError] = useState<string | null>(null);
+  const [tenantInfoSuccess, setTenantInfoSuccess] = useState<string | null>(null);
+  const [tenantAddress, setTenantAddress] = useState("");
+  const [tenantWebsite, setTenantWebsite] = useState("");
+  const [tenantCompanySize, setTenantCompanySize] = useState("");
+
   // Active tab
-  const [activeTab, setActiveTab] = useState<"info" | "password" | "email" | "branding">("info");
+  const [activeTab, setActiveTab] = useState<"info" | "password" | "branding">("info");
 
   const prettifyContactEmailError = (message: string) => {
     const m = message || "";
@@ -184,6 +199,25 @@ export default function ProfilePage() {
       .catch((err) => setError(err instanceof Error ? err.message : t.profilePageError))
       .finally(() => setLoading(false));
   }, [t.profilePageError]);
+
+  useEffect(() => {
+    if (!isTenantAdmin) return;
+    setTenantInfoLoading(true);
+    setTenantInfoError(null);
+    getTenantInfo()
+      .then((data) => {
+        setTenantInfo(data);
+        setTenantAddress(data.address ?? "");
+        setTenantWebsite(data.website ?? "");
+        setTenantCompanySize(data.companySize ?? "");
+      })
+      .catch((err) =>
+        setTenantInfoError(
+          err instanceof Error ? err.message : t.profileTenantInfoLoadFailed
+        )
+      )
+      .finally(() => setTenantInfoLoading(false));
+  }, [isTenantAdmin, t.profileTenantInfoLoadFailed]);
 
   useEffect(() => {
     if (!dobEditedRef.current) return;
@@ -346,6 +380,50 @@ export default function ProfilePage() {
     }
   };
 
+  const handleTenantInfoUpdate = async (e: FormEvent) => {
+    e.preventDefault();
+    setTenantInfoError(null);
+    setTenantInfoSuccess(null);
+
+    const nextAddress = tenantAddress.trim();
+    const nextWebsite = tenantWebsite.trim();
+    const nextCompanySize = tenantCompanySize.trim();
+
+    if (nextAddress.length > 500) {
+      setTenantInfoError(t.profileTenantInfoAddressTooLong);
+      return;
+    }
+    if (nextWebsite.length > 255) {
+      setTenantInfoError(t.profileTenantInfoWebsiteTooLong);
+      return;
+    }
+    if (nextCompanySize.length > 50) {
+      setTenantInfoError(t.profileTenantInfoCompanySizeTooLong);
+      return;
+    }
+
+    setTenantInfoSaving(true);
+    try {
+      const updated = await updateTenantProfile({
+        address: nextAddress || null,
+        website: nextWebsite || null,
+        companySize: nextCompanySize || null,
+      });
+      const merged = { ...(tenantInfo ?? {}), ...updated };
+      setTenantInfo(merged);
+      setTenantAddress(merged.address ?? "");
+      setTenantWebsite(merged.website ?? "");
+      setTenantCompanySize(merged.companySize ?? "");
+      setTenantInfoSuccess(t.profileTenantInfoUpdatedSuccess);
+    } catch (err) {
+      setTenantInfoError(
+        err instanceof Error ? err.message : t.profileTenantInfoUpdateFailed
+      );
+    } finally {
+      setTenantInfoSaving(false);
+    }
+  };
+
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setLogoFile(file);
@@ -372,6 +450,7 @@ export default function ProfilePage() {
     try {
       const result = await uploadTenantLogo(logoFile);
       setProfile((prev) => prev ? { ...prev, tenantLogoUrl: result.logoUrl ?? prev.tenantLogoUrl } : prev);
+      setTenantInfo((prev) => prev ? { ...prev, logoUrl: result.logoUrl ?? prev.logoUrl } : prev);
       setLogoSuccess(t.profileTenantLogoSuccess);
       setLogoFile(null);
       if (logoInputRef.current) logoInputRef.current.value = "";
@@ -385,13 +464,13 @@ export default function ProfilePage() {
   const inputClass = "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30";
   const dobCompositeClass = "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus-within:border-emerald-400 dark:focus-within:ring-emerald-400/30";
   const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
-  const logoDisplayUrl = logoPreviewUrl ?? profile?.tenantLogoUrl ?? null;
+  const logoDisplayUrl = logoPreviewUrl ?? tenantInfo?.logoUrl ?? profile?.tenantLogoUrl ?? null;
+  const tenantNameDisplay = tenantInfo?.name ?? profile?.tenantName ?? "";
 
   const tabs = [
     { id: "info" as const, label: t.profilePersonalInformation, icon: User },
     { id: "password" as const, label: t.profileChangePasswordTitle, icon: Key },
-    { id: "email" as const, label: t.profileUpdateContactEmail, icon: Mail },
-    ...(isTenantAdmin ? [{ id: "branding" as const, label: t.profileTenantBrandingTitle, icon: Image }] : []),
+    ...(isTenantAdmin ? [{ id: "branding" as const, label: t.profileTenantBrandingTitle, icon: Building }] : []),
   ];
 
   if (loading) {
@@ -469,137 +548,210 @@ export default function ProfilePage() {
 
           {/* Tab Content */}
           <div className="rounded-2xl bg-white p-6 shadow-lg dark:bg-zinc-900/80">
+            <div key={activeTab} className="animate-tab-enter">
             {/* Info Tab */}
             {activeTab === "info" && (
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
                 {/* Personal Info Card */}
-                <section className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50">
+                <section className="h-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50 flex flex-col">
                   <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
                       <User className="h-4 w-4" />
                     </span>
                     {t.profilePersonalInformation}
                   </h2>
-                  <dl className="space-y-3 text-sm">
-                    {[
-                      { icon: Mail, label: t.email, value: profile.email },
-                      { icon: Mail, label: t.contactEmail, value: profile.contactEmail ?? "—" },
-                      { icon: User, label: t.fullName, value: profile.fullName },
-                      { icon: Phone, label: t.phone, value: profile.phoneNumber ?? "—" },
-                      { icon: Calendar, label: t.profileDateOfBirth, value: formatDobDisplay(profile.dateOfBirth) },
-                      { icon: MapPin, label: t.address, value: profile.address ?? "—" },
-                      { icon: ShieldCheck, label: t.role, value: profile.roleName ?? "—" },
-                      { icon: Building, label: t.department, value: profile.departmentName ?? "—" },
-                      { icon: Building, label: t.tenant, value: profile.tenantName ?? "—" },
-                      { icon: Clock, label: t.profileLastLogin, value: formatDateTime(profile.lastLoginAt, dateLocale) },
-                    ].map(({ icon: Icon, label, value }) => (
-                      <div key={label} className="flex gap-3">
-                        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
-                        <div>
-                          <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
-                          <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
+                  <div className="flex-1 flex items-center">
+                    <dl className="w-full space-y-3 text-sm">
+                      {[
+                        { icon: Mail, label: t.email, value: profile.email },
+                        { icon: Mail, label: t.contactEmail, value: profile.contactEmail ?? "—" },
+                        { icon: User, label: t.fullName, value: profile.fullName },
+                        { icon: Phone, label: t.phone, value: profile.phoneNumber ?? "—" },
+                        { icon: Calendar, label: t.profileDateOfBirth, value: formatDobDisplay(profile.dateOfBirth) },
+                        { icon: MapPin, label: t.address, value: profile.address ?? "—" },
+                        { icon: ShieldCheck, label: t.role, value: profile.roleName ?? "—" },
+                        { icon: Building, label: t.department, value: profile.departmentName ?? "—" },
+                        { icon: Building, label: t.tenant, value: profile.tenantName ?? "—" },
+                        { icon: Clock, label: t.profileLastLogin, value: formatDateTime(profile.lastLoginAt, dateLocale) },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} className="flex gap-3">
+                          <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                          <div>
+                            <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
+                            <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </dl>
+                      ))}
+                    </dl>
+                  </div>
                 </section>
 
-                {/* Update Form Card */}
-                <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-5 dark:border-violet-800 dark:bg-violet-950/20">
-                  <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400">
-                      <Pencil className="h-4 w-4" />
-                    </span>
-                    {t.profileUpdateProfile}
-                  </h2>
-                  <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileUpdateProfileHint}</p>
+                <div className="flex h-full flex-col gap-6">
+                  {/* Update Form Card */}
+                  <section className="flex-1 rounded-xl border border-violet-200 bg-violet-50/30 p-5 dark:border-violet-800 dark:bg-violet-950/20">
+                    <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400">
+                        <Pencil className="h-4 w-4" />
+                      </span>
+                      {t.profileUpdateProfile}
+                    </h2>
+                    <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileUpdateProfileHint}</p>
 
-                  <form onSubmit={handleUpdate} className="space-y-4">
-                    {updateError && (
-                      <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{updateError}</p>
-                    )}
-                    {updateSuccess && (
-                      <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profileUpdatedSuccessfully}</p>
-                    )}
+                    <form onSubmit={handleUpdate} className="space-y-4">
+                      {updateError && (
+                        <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{updateError}</p>
+                      )}
+                      {updateSuccess && (
+                        <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profileUpdatedSuccessfully}</p>
+                      )}
 
-                    <div>
-                      <label htmlFor="phone" className={labelClass}>{t.phone}</label>
-                      <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/80">
-                        <span className="inline-flex items-center border-r border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">+84</span>
+                      <div>
+                        <label htmlFor="phone" className={labelClass}>{t.phone}</label>
+                        <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/80">
+                          <span className="inline-flex items-center border-r border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">+84</span>
+                          <input
+                            id="phone"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={10}
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(onlyDigits(e.target.value).slice(0, 10))}
+                            placeholder="0123456789"
+                            className="block w-full border-0 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none dark:bg-zinc-800/80 dark:text-zinc-100"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="dob" className={labelClass}>{t.profileDateOfBirth}</label>
+                        <div className={dobCompositeClass}>
+                          <input
+                            id="dob"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="bday"
+                            placeholder={t.profileDobPlaceholder}
+                            maxLength={10}
+                            value={dateOfBirthDisplay}
+                            onChange={(e) => {
+                              dobEditedRef.current = true;
+                              setDateOfBirthDisplay(formatDobDigitsInput(e.target.value));
+                            }}
+                            className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 outline-none focus:ring-0 dark:bg-transparent dark:text-zinc-100"
+                          />
+                          <input
+                            ref={dobPickerRef}
+                            type="date"
+                            className="sr-only"
+                            tabIndex={-1}
+                            aria-hidden
+                            value={dobPickerIsoValue}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              dobEditedRef.current = true;
+                              if (v) setDateOfBirthDisplay(isoDateToDdMmYyyy(v));
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={openDobPicker}
+                            className="flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
+                            title={t.profileDobPickFromCalendar}
+                            aria-label={t.profileDobOpenCalendar}
+                          >
+                            <Calendar className="h-5 w-5" aria-hidden />
+                          </button>
+                        </div>
+                        {dobUnder18Notice && (
+                          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" role="alert">
+                            {dobUnder18Notice}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="address" className={labelClass}>{t.address}</label>
+                        <textarea id="address" rows={3} maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={updateLoading}
+                        className="w-full rounded-xl bg-linear-to-r from-violet-500 to-purple-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-600 hover:to-purple-600 disabled:opacity-60"
+                      >
+                        {updateLoading ? t.profileSaving : t.profileSaveChanges}
+                      </button>
+                    </form>
+                  </section>
+
+                  {/* Contact Email Card */}
+                  <section className="flex-1 rounded-xl border border-cyan-200 bg-cyan-50/30 p-5 dark:border-cyan-800 dark:bg-cyan-950/20">
+                    <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400">
+                        <Mail className="h-4 w-4" />
+                      </span>
+                      {t.profileUpdateContactEmail}
+                    </h2>
+                    <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileUpdateContactEmailHint}</p>
+
+                    <form onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp} className="space-y-4">
+                      {contactError && (
+                        <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{contactError}</p>
+                      )}
+                      {contactSuccess && (
+                        <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{contactSuccess}</p>
+                      )}
+
+                      <div>
+                        <label htmlFor="newContactEmail" className={labelClass}>{t.profileNewContactEmailLabel}</label>
                         <input
-                          id="phone"
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={10}
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(onlyDigits(e.target.value).slice(0, 10))}
-                          placeholder="0123456789"
-                          className="block w-full border-0 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none dark:bg-zinc-800/80 dark:text-zinc-100"
+                          id="newContactEmail"
+                          type="email"
+                          value={newContactEmail}
+                          onChange={(e) => setNewContactEmail(e.target.value)}
+                          className={inputClass}
+                          placeholder="email@example.com"
+                          required
                         />
                       </div>
-                    </div>
 
-                    <div>
-                      <label htmlFor="dob" className={labelClass}>{t.profileDateOfBirth}</label>
-                      <div className={dobCompositeClass}>
-                        <input
-                          id="dob"
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="bday"
-                          placeholder={t.profileDobPlaceholder}
-                          maxLength={10}
-                          value={dateOfBirthDisplay}
-                          onChange={(e) => {
-                            dobEditedRef.current = true;
-                            setDateOfBirthDisplay(formatDobDigitsInput(e.target.value));
-                          }}
-                          className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 outline-none focus:ring-0 dark:bg-transparent dark:text-zinc-100"
-                        />
-                        <input
-                          ref={dobPickerRef}
-                          type="date"
-                          className="sr-only"
-                          tabIndex={-1}
-                          aria-hidden
-                          value={dobPickerIsoValue}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            dobEditedRef.current = true;
-                            if (v) setDateOfBirthDisplay(isoDateToDdMmYyyy(v));
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={openDobPicker}
-                          className="flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
-                          title={t.profileDobPickFromCalendar}
-                          aria-label={t.profileDobOpenCalendar}
-                        >
-                          <Calendar className="h-5 w-5" aria-hidden />
-                        </button>
-                      </div>
-                      {dobUnder18Notice && (
-                        <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200" role="alert">
-                          {dobUnder18Notice}
+                      {otpSent && (
+                        <div>
+                          <label htmlFor="otp" className={labelClass}>{t.profileOtpSixDigits}</label>
+                          <input
+                            id="otp"
+                            type="text"
+                            inputMode="numeric"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                            placeholder="123456"
+                            maxLength={6}
+                            required
+                          />
                         </div>
                       )}
-                    </div>
 
-                    <div>
-                      <label htmlFor="address" className={labelClass}>{t.address}</label>
-                      <textarea id="address" rows={3} maxLength={500} value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
-                    </div>
+                      <button
+                        type="submit"
+                        disabled={contactLoading}
+                        className="w-full rounded-xl bg-linear-to-r from-cyan-500 to-sky-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-600 hover:to-sky-600 disabled:opacity-60"
+                      >
+                        {contactLoading ? t.profileProcessing : otpSent ? t.profileVerifyOtpUpdate : t.profileSendOtp}
+                      </button>
 
-                    <button
-                      type="submit"
-                      disabled={updateLoading}
-                      className="w-full rounded-xl bg-linear-to-r from-violet-500 to-purple-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-600 hover:to-purple-600 disabled:opacity-60"
-                    >
-                      {updateLoading ? t.profileSaving : t.profileSaveChanges}
-                    </button>
-                  </form>
-                </section>
+                      {otpSent && (
+                        <button
+                          type="button"
+                          onClick={() => { setOtpSent(false); setOtp(""); setContactSuccess(null); setContactError(null); }}
+                          className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          {t.profileResendOrChangeEmail}
+                        </button>
+                      )}
+                    </form>
+                  </section>
+                </div>
               </div>
             )}
 
@@ -700,125 +852,149 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Email Tab */}
-            {activeTab === "email" && (
-              <div className="mx-auto max-w-lg">
-                <div className="mb-6 text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-600 dark:bg-cyan-900/50 dark:text-cyan-400">
-                    <Mail className="h-7 w-7" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t.profileUpdateContactEmail}</h2>
-                  <p className="mt-1 text-xs text-zinc-500">{t.profileUpdateContactEmailHint}</p>
-                </div>
-
-                <form onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp} className="space-y-4">
-                  {contactError && (
-                    <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{contactError}</p>
-                  )}
-                  {contactSuccess && (
-                    <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{contactSuccess}</p>
-                  )}
-
-                  <div>
-                    <label htmlFor="newContactEmail" className={labelClass}>{t.profileNewContactEmailLabel}</label>
-                    <input
-                      id="newContactEmail"
-                      type="email"
-                      value={newContactEmail}
-                      onChange={(e) => setNewContactEmail(e.target.value)}
-                      className={inputClass}
-                      placeholder="email@example.com"
-                      required
-                    />
-                  </div>
-
-                  {otpSent && (
-                    <div>
-                      <label htmlFor="otp" className={labelClass}>{t.profileOtpSixDigits}</label>
-                      <input
-                        id="otp"
-                        type="text"
-                        inputMode="numeric"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
-                        placeholder="123456"
-                        maxLength={6}
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={contactLoading}
-                    className="w-full rounded-xl bg-linear-to-r from-cyan-500 to-sky-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-600 hover:to-sky-600 disabled:opacity-60"
-                  >
-                    {contactLoading ? t.profileProcessing : otpSent ? t.profileVerifyOtpUpdate : t.profileSendOtp}
-                  </button>
-
-                  {otpSent && (
-                    <button
-                      type="button"
-                      onClick={() => { setOtpSent(false); setOtp(""); setContactSuccess(null); setContactError(null); }}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    >
-                      {t.profileResendOrChangeEmail}
-                    </button>
-                  )}
-                </form>
-              </div>
-            )}
-
             {/* Branding Tab */}
             {activeTab === "branding" && isTenantAdmin && (
-              <div className="mx-auto max-w-lg">
-                <div className="mb-6 text-center">
+              <div className="space-y-6">
+                <div className="text-center">
                   <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
-                    <Image className="h-7 w-7" />
+                    <Building className="h-7 w-7" />
                   </div>
                   <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{t.profileTenantBrandingTitle}</h2>
                   <p className="mt-1 text-xs text-zinc-500">{t.profileTenantBrandingHint}</p>
                 </div>
 
-                {logoError && (
-                  <p className="mb-4 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{logoError}</p>
-                )}
-                {logoSuccess && (
-                  <p className="mb-4 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{logoSuccess}</p>
-                )}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <section className="rounded-xl border border-indigo-200 bg-indigo-50/30 p-5 dark:border-indigo-800 dark:bg-indigo-950/20">
+                    <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400">
+                        <Building className="h-4 w-4" />
+                      </span>
+                      {t.profileTenantInfoTitle}
+                    </h3>
+                    <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileTenantInfoHint}</p>
 
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-zinc-200 bg-white/80 p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/70">
-                    <AppLogo size={48} tenantLogoUrl={logoDisplayUrl} tenantName={profile.tenantName} />
-                  </div>
-                  <div className="min-w-56 flex-1">
-                    <label htmlFor="tenantLogo" className={labelClass}>{t.profileTenantLogoLabel}</label>
-                    <input
-                      id="tenantLogo"
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={handleLogoFileChange}
-                      className={inputClass}
-                    />
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{t.profileTenantLogoNote}</p>
-                    {logoFile && (
-                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t.profileTenantLogoSelected}: {logoFile.name} - {formatBytes(logoFile.size)}</p>
+                    {tenantInfoError && (
+                      <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{tenantInfoError}</p>
                     )}
-                  </div>
-                </div>
+                    {tenantInfoSuccess && (
+                      <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{tenantInfoSuccess}</p>
+                    )}
 
-                <button
-                  type="button"
-                  onClick={handleLogoUpload}
-                  disabled={logoUploading || !logoFile}
-                  className="mt-4 w-full rounded-xl bg-linear-to-r from-indigo-500 to-slate-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-slate-600 disabled:opacity-60"
-                >
-                  {logoUploading ? t.profileTenantLogoUploading : t.profileTenantLogoUpload}
-                </button>
+                    <form onSubmit={handleTenantInfoUpdate} className="space-y-4">
+                      <div>
+                        <label htmlFor="tenantName" className={labelClass}>{t.profileTenantNameLabel}</label>
+                        <input
+                          id="tenantName"
+                          value={tenantNameDisplay}
+                          readOnly
+                          className={`${inputClass} cursor-not-allowed bg-zinc-100/70 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-300`}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="tenantWebsite" className={labelClass}>{t.profileTenantWebsiteLabel}</label>
+                        <input
+                          id="tenantWebsite"
+                          type="text"
+                          maxLength={255}
+                          value={tenantWebsite}
+                          onChange={(e) => setTenantWebsite(e.target.value)}
+                          className={inputClass}
+                          placeholder="https://example.com"
+                          disabled={tenantInfoLoading}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="tenantCompanySize" className={labelClass}>{t.profileTenantCompanySizeLabel}</label>
+                        <select
+                          id="tenantCompanySize"
+                          value={tenantCompanySize}
+                          onChange={(e) => setTenantCompanySize(e.target.value)}
+                          className={inputClass}
+                          disabled={tenantInfoLoading}
+                        >
+                          <option value="">{t.profileTenantCompanySizeSelect}</option>
+                          <option value="1-10">1-10</option>
+                          <option value="11-50">11-50</option>
+                          <option value="51-200">51-200</option>
+                          <option value="201-500">201-500</option>
+                          <option value="500+">500+</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label htmlFor="tenantAddress" className={labelClass}>{t.profileTenantAddressLabel}</label>
+                        <textarea
+                          id="tenantAddress"
+                          rows={3}
+                          maxLength={500}
+                          value={tenantAddress}
+                          onChange={(e) => setTenantAddress(e.target.value)}
+                          className={inputClass}
+                          disabled={tenantInfoLoading}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={tenantInfoSaving || tenantInfoLoading}
+                        className="w-full rounded-xl bg-linear-to-r from-indigo-500 to-slate-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-slate-600 disabled:opacity-60"
+                      >
+                        {tenantInfoSaving ? t.profileTenantInfoSaving : t.profileTenantInfoSave}
+                      </button>
+                    </form>
+                  </section>
+
+                  <section className="rounded-xl border border-zinc-200 bg-white/70 p-5 dark:border-zinc-700 dark:bg-zinc-800/60">
+                    <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-400">
+                        <Image className="h-4 w-4" />
+                      </span>
+                      {t.profileTenantLogoLabel}
+                    </h3>
+                    <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">{t.profileTenantLogoNote}</p>
+
+                    {logoError && (
+                      <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{logoError}</p>
+                    )}
+                    {logoSuccess && (
+                      <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{logoSuccess}</p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-zinc-200 bg-white/80 p-2 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/70">
+                        <AppLogo size={48} tenantLogoUrl={logoDisplayUrl} tenantName={tenantNameDisplay} />
+                      </div>
+                      <div className="min-w-56 flex-1">
+                        <label htmlFor="tenantLogo" className={labelClass}>{t.profileTenantLogoLabel}</label>
+                        <input
+                          id="tenantLogo"
+                          ref={logoInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={handleLogoFileChange}
+                          className={inputClass}
+                        />
+                        {logoFile && (
+                          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t.profileTenantLogoSelected}: {logoFile.name} - {formatBytes(logoFile.size)}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogoUpload}
+                      disabled={logoUploading || !logoFile}
+                      className="mt-4 w-full rounded-xl bg-linear-to-r from-indigo-500 to-slate-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-slate-600 disabled:opacity-60"
+                    >
+                      {logoUploading ? t.profileTenantLogoUploading : t.profileTenantLogoUpload}
+                    </button>
+                  </section>
+                </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </main>

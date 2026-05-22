@@ -105,6 +105,93 @@ export interface TenantLogoUploadResponse {
   logoUrl?: string;
 }
 
+export interface TenantInfoResponse {
+  tenantId?: string;
+  name?: string;
+  address?: string;
+  website?: string;
+  companySize?: string;
+  logoUrl?: string;
+  contactEmail?: string;
+  representativeName?: string;
+  representativePosition?: string;
+  representativePhone?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateTenantProfileRequest {
+  address?: string | null;
+  website?: string | null;
+  companySize?: string | null;
+}
+
+function normalizeTenantInfo(raw: unknown): TenantInfoResponse {
+  if (!raw || typeof raw !== "object") return {};
+  const o = raw as Record<string, unknown>;
+  return {
+    tenantId:
+      typeof o.tenant_id === "string"
+        ? o.tenant_id
+        : typeof o.tenantId === "string"
+          ? o.tenantId
+          : undefined,
+    name: typeof o.name === "string" ? o.name : undefined,
+    address: typeof o.address === "string" ? o.address : undefined,
+    website: typeof o.website === "string" ? o.website : undefined,
+    companySize:
+      typeof o.company_size === "string"
+        ? o.company_size
+        : typeof o.companySize === "string"
+          ? o.companySize
+          : undefined,
+    logoUrl:
+      typeof o.logo_url === "string"
+        ? o.logo_url
+        : typeof o.logoUrl === "string"
+          ? o.logoUrl
+          : undefined,
+    contactEmail:
+      typeof o.contact_email === "string"
+        ? o.contact_email
+        : typeof o.contactEmail === "string"
+          ? o.contactEmail
+          : undefined,
+    representativeName:
+      typeof o.representative_name === "string"
+        ? o.representative_name
+        : typeof o.representativeName === "string"
+          ? o.representativeName
+          : undefined,
+    representativePosition:
+      typeof o.representative_position === "string"
+        ? o.representative_position
+        : typeof o.representativePosition === "string"
+          ? o.representativePosition
+          : undefined,
+    representativePhone:
+      typeof o.representative_phone === "string"
+        ? o.representative_phone
+        : typeof o.representativePhone === "string"
+          ? o.representativePhone
+          : undefined,
+    status: typeof o.status === "string" ? o.status : undefined,
+    createdAt:
+      typeof o.created_at === "string"
+        ? o.created_at
+        : typeof o.createdAt === "string"
+          ? o.createdAt
+          : undefined,
+    updatedAt:
+      typeof o.updated_at === "string"
+        ? o.updated_at
+        : typeof o.updatedAt === "string"
+          ? o.updatedAt
+          : undefined,
+  };
+}
+
 /** POST /api/v1/tenant-admin/tenant/logo */
 export async function uploadTenantLogo(file: File): Promise<TenantLogoUploadResponse> {
   const form = new FormData();
@@ -116,6 +203,29 @@ export async function uploadTenantLogo(file: File): Promise<TenantLogoUploadResp
   });
 
   return handleTenantAdminResponse<TenantLogoUploadResponse>(res);
+}
+
+/** GET /api/v1/tenant-admin/dashboard/tenant */
+export async function getTenantInfo(): Promise<TenantInfoResponse> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/dashboard/tenant`);
+  if (!res.ok) {
+    throw new Error(await res.text().catch(() => "Failed to load tenant info"));
+  }
+  const data = await res.json().catch(() => ({}));
+  return normalizeTenantInfo(data);
+}
+
+/** PUT /api/v1/tenant-admin/tenant/profile */
+export async function updateTenantProfile(
+  body: UpdateTenantProfileRequest
+): Promise<TenantInfoResponse> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/tenant/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await handleTenantAdminResponse<TenantInfoResponse>(res);
+  return normalizeTenantInfo(data);
 }
 
 /** Parse `permissions` from GET role / list (string[] or legacy { code }[]). */

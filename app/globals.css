@@ -126,6 +126,22 @@ footer {
   animation: workspaceViewEnter 240ms ease-out both;
 }
 
+/* Profile tabs enter animation */
+@keyframes tabEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-enter {
+  animation: tabEnter 220ms ease-out both;
+}
+
 /* AI chatbot entry loading */
 @keyframes chatbotOrbit {
   to {
