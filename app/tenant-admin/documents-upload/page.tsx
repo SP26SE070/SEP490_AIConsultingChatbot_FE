@@ -94,6 +94,7 @@ export default function DocumentsUploadPage() {
     visibility: "COMPANY_WIDE" | "SPECIFIC_DEPARTMENTS" | "SPECIFIC_ROLES" | "SPECIFIC_DEPARTMENTS_AND_ROLES";
     departmentIds: number[];
     roleIds: number[];
+    minimumRoleLevel: number;
   }) => {
     setUploading(true);
     setError(null);
@@ -105,6 +106,7 @@ export default function DocumentsUploadPage() {
         categoryId: data.categoryId || null,
         tagIds: data.tagIds.length ? data.tagIds : null,
         description: data.description || null,
+        minimumRoleLevel: data.minimumRoleLevel,
         visibility: data.visibility,
         accessibleDepartments: data.departmentIds.length ? data.departmentIds : null,
         accessibleRoles: data.roleIds.length ? data.roleIds : null,
