@@ -22,7 +22,7 @@ interface DocumentUploadCardProps {
     departmentIds: number[];
     roleIds: number[];
   }) => Promise<void>;
-  onUploadNewVersion: (data: {
+  onUploadNewVersion?: (data: {
     documentId: string;
     file: File;
   }) => Promise<void>;
@@ -251,7 +251,7 @@ export function DocumentUploadCard({
   };
 
   const handleConfirmUploadNewVersion = async () => {
-    if (!selectedFile || !duplicateInfo) return;
+    if (!selectedFile || !duplicateInfo || !onUploadNewVersion) return;
     setError(null);
     try {
       await onUploadNewVersion({
@@ -309,14 +309,16 @@ export function DocumentUploadCard({
               </p>
             )}
             <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                disabled={uploading}
-                onClick={handleConfirmUploadNewVersion}
-                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-50"
-              >
-                {isEn ? "Upload as new version" : "Tải lên thành phiên bản mới"}
-              </button>
+              {onUploadNewVersion ? (
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={handleConfirmUploadNewVersion}
+                  className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-50"
+                >
+                  {isEn ? "Upload as new version" : "Tải lên thành phiên bản mới"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setDuplicateInfo(null)}
