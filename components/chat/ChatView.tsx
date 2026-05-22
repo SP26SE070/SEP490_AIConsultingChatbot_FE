@@ -93,40 +93,40 @@ function mapApiSourcesToUi(
   rawSources: unknown
 ): Array<{ documentId?: string; documentName: string; confidence?: number }> {
   if (!Array.isArray(rawSources)) return [];
-  return rawSources
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
-      const src = item as Record<string, unknown>;
-      const documentId =
-        typeof src.documentId === "string"
-          ? src.documentId
-          : typeof src.document_id === "string"
-            ? src.document_id
+  return rawSources.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const src = item as Record<string, unknown>;
+    const documentId =
+      typeof src.documentId === "string"
+        ? src.documentId
+        : typeof src.document_id === "string"
+          ? src.document_id
+          : undefined;
+    const documentName =
+      typeof src.fileName === "string"
+        ? src.fileName
+        : typeof src.documentName === "string"
+          ? src.documentName
+          : typeof src.document_name === "string"
+            ? src.document_name
+            : "";
+    const confidenceRaw =
+      typeof src.relevanceScore === "number"
+        ? src.relevanceScore
+        : typeof src.similarityScore === "number"
+          ? src.similarityScore
+          : typeof src.similarity_score === "number"
+            ? src.similarity_score
             : undefined;
-      const documentName =
-        typeof src.fileName === "string"
-          ? src.fileName
-          : typeof src.documentName === "string"
-            ? src.documentName
-            : typeof src.document_name === "string"
-              ? src.document_name
-              : "";
-      const confidenceRaw =
-        typeof src.relevanceScore === "number"
-          ? src.relevanceScore
-          : typeof src.similarityScore === "number"
-            ? src.similarityScore
-            : typeof src.similarity_score === "number"
-              ? src.similarity_score
-              : undefined;
-      if (!documentName.trim()) return null;
-      return {
+    if (!documentName.trim()) return [];
+    return [
+      {
         documentId,
         documentName: documentName.trim(),
         confidence: confidenceRaw,
-      };
-    })
-    .filter((s): s is { documentId?: string; documentName: string; confidence?: number } => s != null);
+      },
+    ];
+  });
 }
 
 function sanitizeAssistantContent(raw: string): string {
