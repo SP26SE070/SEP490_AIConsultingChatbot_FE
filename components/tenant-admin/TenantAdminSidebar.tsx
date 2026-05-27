@@ -17,7 +17,6 @@ import {
   ClipboardList,
   Sparkles,
   X,
-  Settings,
 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -66,7 +65,6 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
     { name: t.aiInsights, href: "/tenant-admin/ai-insights", icon: Sparkles },
     { name: t.auditLogs, href: "/tenant-admin/audit-logs", icon: ClipboardList },
     { name: t.subscription, href: "/tenant-admin/subscription", icon: CreditCard },
-    { name: t.settings, href: "/tenant-admin/settings", icon: Settings },
   ];
 
   useEffect(() => {
