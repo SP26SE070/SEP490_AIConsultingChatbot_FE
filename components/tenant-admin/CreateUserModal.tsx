@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { getTenantRoles, getTenantDepartments, createTenantUser, type CreateUserRequest, type RoleResponse, type DepartmentResponse } from "@/lib/api/tenant-admin";
+import { useLanguageStore } from "@/lib/language-store";
+import { getRoleLevelDisplayLabel } from "@/lib/role-levels";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -38,6 +40,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
   const [loadOptions, setLoadOptions] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitErrorTone, setSubmitErrorTone] = useState<"warning" | "error">("error");
+  const { language: lang } = useLanguageStore();
 
   useEffect(() => {
     if (!open) return;
