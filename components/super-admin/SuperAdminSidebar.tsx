@@ -12,6 +12,7 @@ import {
   Users,
   CreditCard,
   ChartBar,
+  Building2,
 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
@@ -127,6 +128,7 @@ export function SuperAdminSidebar({ open, setOpen }: SuperAdminSidebarProps) {
     { name: t.dashboard, href: "/super-admin", icon: LayoutDashboard },
     { name: t.roles, href: "/super-admin/roles", icon: Shield },
     { name: t.staff, href: "/super-admin/staff", icon: Users },
+    { name: language === "en" ? "Organizations" : "Tổ chức", href: "/super-admin/organizations", icon: Building2 },
     { name: t.pricing, href: "/super-admin/pricing", icon: CreditCard },
     { name: t.subscriptions, href: "/super-admin/subscriptions", icon: CreditCard },
     { name: t.aiInsights, href: "/super-admin/ai-insights", icon: ChartBar },
