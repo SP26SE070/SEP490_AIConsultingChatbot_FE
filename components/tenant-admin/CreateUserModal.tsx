@@ -5,6 +5,7 @@ import { Loader2, Info } from "lucide-react";
 import { getTenantRoles, getTenantDepartments, createTenantUser, type CreateUserRequest, type RoleResponse, type DepartmentResponse } from "@/lib/api/tenant-admin";
 import { useLanguageStore } from "@/lib/language-store";
 import { getRoleLevelDisplayLabel } from "@/lib/role-levels";
+import { AnimatedModal } from "@/components/ui/AnimatedModal";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -104,12 +105,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
+    <AnimatedModal open={open} onClose={onClose}>
         <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Tạo user mới</h3>
         <p className="mt-1 text-xs text-zinc-500">Thêm nhân viên mới vào tổ chức và gán phòng ban/vai trò.</p>
         {submitError && (
@@ -222,7 +219,6 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </AnimatedModal>
   );
 }
