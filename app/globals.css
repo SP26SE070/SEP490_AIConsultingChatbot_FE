@@ -337,3 +337,35 @@ body::-webkit-scrollbar-thumb:hover,
 .table-scroll-container table {
   min-width: 100%;
 }
+
+/* Modal scale-in animation */
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Tab enter animation */
+@keyframes tabEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-enter {
+  animation: tabEnter 0.3s ease-out;
+}
