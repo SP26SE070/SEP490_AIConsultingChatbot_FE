@@ -23,6 +23,7 @@ import {
   type DocumentPreviewResponse,
   type ListDocumentsParams,
 } from "@/lib/api/documents";
+import { documentUploadAccessHint } from "@/lib/role-levels";
 import type {
   DocumentResponse,
   DeletedDocumentResponse,
@@ -762,6 +763,9 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
         <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">
           {t.uploadDocument}
         </h3>
+        <p className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          {documentUploadAccessHint(isEn ? "en" : "vi")}
+        </p>
         <form onSubmit={handleUpload} className="flex flex-col gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
