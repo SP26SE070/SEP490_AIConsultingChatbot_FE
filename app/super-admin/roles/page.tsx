@@ -451,6 +451,8 @@ export default function SuperAdminRolesPage() {
 function CreateRoleModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [form, setForm] = useState<CreateAdminRoleRequest>({ code: "", name: "", description: "", tenantId: null });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [tenants, setTenants] = useState<AdminTenantSummary[]>([]);
   const [tenantsLoading, setTenantsLoading] = useState(false);
   const [tenantsError, setTenantsError] = useState<string | null>(null);
@@ -479,10 +481,14 @@ function CreateRoleModal({ onClose, onSuccess }: { onClose: () => void; onSucces
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(false);
+    
     if (!form.code?.trim() || !form.name?.trim()) {
-      alert("Mã và tên là bắt buộc.");
+      setError("Mã và tên là bắt buộc");
       return;
     }
+    
     setLoading(true);
     try {
       await createAdminRole({
@@ -491,56 +497,162 @@ function CreateRoleModal({ onClose, onSuccess }: { onClose: () => void; onSucces
         description: form.description?.trim() || undefined,
         tenantId: form.tenantId && String(form.tenantId).trim() ? String(form.tenantId).trim() : null,
       });
-      onSuccess();
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 1500);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Tạo vai trò thất bại");
+      setError(e instanceof Error ? e.message : "Tạo vai trò thất bại");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Tạo vai trò mới</h3>
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Mã *</label>
-            <input value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm uppercase dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="TEAM_LEADER" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-900/80 dark:bg-black/90" onClick={onClose} />
+      <div className="relative w-full max-w-lg animate-scale-in rounded-3xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Gradient Header */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-purple-500 via-violet-500 to-indigo-600 px-6 py-8">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          <div className="relative">
+            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white">Tạo vai trò mới</h3>
+            <p className="mt-2 text-sm text-purple-50">
+              Quản lý quyền truy cập và vai trò trong hệ thống
+            </p>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Tên *</label>
-            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="Team Leader" />
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={submit} className="p-6">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+              Vai trò đã được tạo thành công!
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Code Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Mã <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={form.code}
+                onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm uppercase text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-purple-400"
+                placeholder="TEAM_LEADER"
+                required
+              />
+              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                Mã định danh duy nhất (sẽ tự động chuyển chữ hoa)
+              </p>
+            </div>
+
+            {/* Name Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Tên <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-purple-400"
+                placeholder="Team Leader"
+                required
+              />
+            </div>
+
+            {/* Description Textarea */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Mô tả
+                <span className="ml-2 text-xs font-normal text-zinc-400">(Tùy chọn)</span>
+              </label>
+              <textarea
+                value={form.description ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                rows={3}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-purple-400"
+                placeholder="Mô tả chi tiết về vai trò này..."
+              />
+            </div>
+
+            {/* Tenant Select */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Tổ chức
+                <span className="ml-2 text-xs font-normal text-zinc-400">
+                  (Để trống = vai trò hệ thống)
+                </span>
+              </label>
+              <select
+                value={form.tenantId ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, tenantId: e.target.value || null }))}
+                disabled={tenantsLoading}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-purple-400"
+              >
+                <option value="">— Vai trò hệ thống (không gắn tổ chức) —</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.status ? ` (${t.status})` : ""}
+                  </option>
+                ))}
+              </select>
+              {tenantsLoading && (
+                <p className="mt-1.5 flex items-center gap-2 text-xs text-zinc-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Đang tải danh sách tổ chức…
+                </p>
+              )}
+              {tenantsError && (
+                <p className="mt-1.5 text-xs text-red-500">{tenantsError}</p>
+              )}
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Mô tả</label>
-            <textarea value={form.description ?? ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Tổ chức (để trống = vai trò hệ thống)</label>
-            <select
-              value={form.tenantId ?? ""}
-              onChange={(e) => setForm((p) => ({ ...p, tenantId: e.target.value || null }))}
-              disabled={tenantsLoading}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white disabled:opacity-60"
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex gap-3">
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:from-purple-600 hover:to-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">— Vai trò hệ thống (không gắn tổ chức) —</option>
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.status ? ` (${t.status})` : ""}
-                </option>
-              ))}
-            </select>
-            {tenantsLoading ? <p className="mt-1 text-xs text-zinc-500">Đang tải danh sách tổ chức…</p> : null}
-            {tenantsError ? <p className="mt-1 text-xs text-red-500">{tenantsError}</p> : null}
-          </div>
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? "Đang tạo..." : "Tạo vai trò"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang tạo...
+                </span>
+              ) : success ? (
+                "Đã tạo!"
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Tạo vai trò
+                </span>
+              )}
             </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">Hủy</button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              Hủy
+            </button>
           </div>
         </form>
       </div>
