@@ -9,7 +9,6 @@ import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { getTenantLlmUsage, type TenantLlmUsageResponse } from "@/lib/api/tenant-admin";
 import { isAuthExpiredErrorMessage } from "@/lib/auth-session-events";
-
 export default function TenantAdminPage() {
   const { language } = useLanguageStore();
   const t = translations[language];
@@ -39,9 +38,9 @@ export default function TenantAdminPage() {
   }, []);
 
   return (
-      <div className="space-y-8">
+      <div className="dashboard-page-shell space-y-10">
         {/* Header */}
-        <div>
+        <div className="pt-1">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {t.organizationDashboard}
           </h1>
@@ -54,7 +53,7 @@ export default function TenantAdminPage() {
         <OrganizationStats />
 
         {/* Charts: people & departments */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-4">
           <EmployeeOverview />
           <DepartmentOverview />
         </div>

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, User, LogOut, Settings, Sun, Moon, Globe, Sparkles } from "lucide-react";
+import { Menu, User, LogOut, Settings, Sun, Moon, Globe } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api/auth";
@@ -12,20 +12,19 @@ import { getProfile } from "@/lib/api/profile";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { useAppTheme } from "@/lib/use-app-theme";
+import { AppLogo } from "@/components/brand/AppLogo";
+import { portalUserMenuPillClass } from "@/lib/dashboard-ui";
 
 const STAFF_FALLBACK_EMAIL = "staff@system.vn";
 
 interface DashboardHeaderProps {
   title: string;
   onMenuClick: () => void;
-  onboardingHref?: string;
-  onboardingLabel?: string;
 }
 
 export function DashboardHeader({
+  title,
   onMenuClick,
-  onboardingHref = "/staff/onboarding",
-  onboardingLabel,
 }: DashboardHeaderProps) {
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -88,34 +87,42 @@ export function DashboardHeader({
   };
 
   return (
-    <div className="mb-6 flex min-w-0 items-center justify-between gap-2 sm:gap-3">
-      <div className="flex items-center gap-2 sm:gap-3">
+    <div className="flex h-full min-h-0 min-w-0 w-full items-center justify-between gap-2 px-0 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 lg:ml-2">
         <button
           type="button"
-          className="rounded-2xl bg-white p-2.5 text-zinc-700 shadow-sm shadow-green-100/60 dark:bg-zinc-950 dark:text-zinc-400 sm:p-3 lg:hidden"
+          className="rounded-2xl bg-white p-2.5 text-zinc-700 shadow-sm shadow-zinc-200/70 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-black/20 sm:p-3.5 lg:hidden"
           onClick={onMenuClick}
         >
           <span className="sr-only">Open sidebar</span>
           <Menu className="h-5 w-5" />
         </button>
+
+        <Link
+          href="/staff"
+          className="flex h-11 min-w-0 max-w-[10.5rem] items-center gap-3.5 pl-2 transition hover:text-emerald-600 sm:max-w-60 sm:gap-4 sm:pl-3 dark:hover:text-emerald-400"
+        >
+          <AppLogo size={32} className="shrink-0" />
+          <div className="min-w-0 pl-0.5 leading-tight sm:pl-1">
+            <p className="hidden truncate text-xs font-medium text-zinc-500 sm:block dark:text-zinc-400">
+              Internal Consultant AI
+            </p>
+            <p className="truncate text-sm font-semibold text-zinc-900 sm:text-base dark:text-zinc-100">
+              {title}
+            </p>
+          </div>
+        </Link>
       </div>
 
       <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
-        <Link
-          href={onboardingHref}
-          className="group hidden items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-emerald-600 hover:bg-emerald-600 hover:text-white sm:inline-flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-emerald-500 dark:hover:bg-emerald-600"
-        >
-          <Sparkles className="h-4.5 w-4.5" />
-          <span>{onboardingLabel ?? t.onboarding}</span>
-        </Link>
-
+        {/* User Menu Dropdown — đồng bộ Super Admin */}
         <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 rounded-2xl bg-white px-2.5 py-2 shadow-sm shadow-green-100/60 transition hover:bg-zinc-50 sm:px-3 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            className={portalUserMenuPillClass}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
-              <User className="h-4 w-4 text-white" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-blue-600">
+              <User className="h-4.5 w-4.5 text-white" />
             </div>
             <span className="hidden text-sm font-semibold text-zinc-900 dark:text-white xl:block">
               {displayName}
@@ -141,9 +148,9 @@ export function DashboardHeader({
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="border-b border-zinc-200 bg-gradient-to-br from-blue-50 to-white px-4 py-3 dark:border-zinc-800 dark:from-blue-950/20 dark:to-zinc-900">
+                <div className="border-b border-zinc-200 bg-linear-to-br from-blue-50 to-white px-4 py-3 dark:border-zinc-800 dark:from-blue-950/20 dark:to-zinc-900">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-blue-600">
                       <User className="h-5 w-5 text-white" />
                     </div>
                     <div>

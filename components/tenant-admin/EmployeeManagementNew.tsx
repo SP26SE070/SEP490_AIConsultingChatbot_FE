@@ -82,7 +82,9 @@ export function EmployeeManagementNew({ onOpenCreate, onOpenImport, onActionSucc
   const [detailUser, setDetailUser] = useState<UserResponse | null>(null);
   const [editUser, setEditUser] = useState<UserResponse | null>(null);
   const [permissionUser, setPermissionUser] = useState<UserResponse | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<{ code: string; name?: string }[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<
+    import("@/lib/permissions").PermissionOption[]
+  >([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [permissionMetaLoading, setPermissionMetaLoading] = useState(false);
@@ -1259,7 +1261,7 @@ function UpdatePermissionsModal({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="font-medium">
-                            {getPermissionLabel(p.code, p.name, isEn ? "en" : "vi")}
+                            {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
                           </div>
                           <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-70">{p.code}</div>
                         </div>

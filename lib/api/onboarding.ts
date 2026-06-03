@@ -8,6 +8,7 @@ import type {
   OnboardingProgressResponse,
   UpdateOnboardingModuleRequest,
 } from "@/types/onboarding";
+import type { PermissionCategoryDto } from "@/lib/permissions";
 
 export type OnboardingAttachmentContent =
   | { kind: "text"; text: string; mime: string }
@@ -119,6 +120,14 @@ export async function getMyOnboardingModuleAttachment(
     kind: "binary",
     mime,
   };
+}
+
+export async function getStaffOnboardingAvailablePermissions(): Promise<PermissionCategoryDto[]> {
+  const res = await fetchWithAuth(`${STAFF_ONBOARDING_BASE}/permissions/available`);
+  return parseResponseOrThrow<PermissionCategoryDto[]>(
+    res,
+    "Khong tai duoc danh sach quyen onboarding"
+  );
 }
 
 export async function getStaffOnboardingModules(

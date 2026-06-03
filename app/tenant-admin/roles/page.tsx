@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getPermissionLabel } from "@/lib/permission-labels";
+import { PermissionSelector } from "@/components/permissions/PermissionSelector";
+import type { PermissionOption } from "@/lib/permissions";
 import { AnimatedSegmentedControl, ErrorNotice, useConfirmDialog } from "@/components/ui";
 import {
   createTenantRole,
@@ -616,55 +618,12 @@ export default function TenantAdminRolesPage() {
   );
 }
 
-function PermissionSelector({
-  selected,
-  allPermissions,
-  onChange,
-  disabled,
-}: {
-  selected: string[];
-  allPermissions: { code: string; name?: string }[];
-  onChange: (next: string[]) => void;
-  disabled?: boolean;
-}) {
-  const { language } = useLanguageStore();
-  const lang = language === "en" ? "en" : "vi";
-  const toggle = (code: string) => {
-    if (disabled) return;
-    onChange(selected.includes(code) ? selected.filter((p) => p !== code) : [...selected, code]);
-  };
-  return (
-    <div className="flex max-h-56 flex-wrap gap-2 overflow-auto rounded-xl border border-zinc-200 p-3 dark:border-zinc-700">
-      {allPermissions.map((p) => {
-        const active = selected.includes(p.code);
-        const label = getPermissionLabel(p.code, p.name, lang);
-        return (
-          <button
-            key={p.code}
-            type="button"
-            disabled={disabled}
-            onClick={() => toggle(p.code)}
-            title={p.code}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              active
-                ? "bg-emerald-500 text-white shadow-md shadow-emerald-600/35 ring-2 ring-emerald-300/60 dark:ring-emerald-400/40"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-            } disabled:cursor-not-allowed disabled:opacity-50`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function CreateRoleModal({
   permissions,
   onClose,
   onSuccess,
 }: {
-  permissions: { code: string; name?: string }[];
+  permissions: PermissionOption[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -742,7 +701,7 @@ function CreateRoleModal({
             </label>
             <PermissionSelector
               selected={form.permissions}
-              allPermissions={permissions}
+              options={permissions}
               onChange={(next) => setForm((p) => ({ ...p, permissions: next }))}
             />
           </div>
@@ -767,7 +726,7 @@ function EditRoleModal({
   onSuccess,
 }: {
   role: RoleResponse;
-  permissions: { code: string; name?: string }[];
+  permissions: PermissionOption[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -887,7 +846,7 @@ function EditRoleModal({
             ) : (
               <PermissionSelector
                 selected={selectedPermissions}
-                allPermissions={permissionsForUi}
+                options={permissionsForUi}
                 onChange={setSelectedPermissions}
               />
             )}
