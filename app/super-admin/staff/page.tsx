@@ -441,59 +441,236 @@ export default function StaffManagementPage() {
 }
 
 function CreateStaffModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { language } = useLanguageStore();
+  const isEn = language === "en";
+  
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Helper functions for phone validation (same as profile page)
+  const onlyDigits = (input: string): string => input.replace(/\D/g, "");
+  
+  const validatePhone = (phoneInput: string): string | null => {
+    if (!phoneInput.trim()) return null; // Optional field
+    
+    const digits = onlyDigits(phoneInput);
+    
+    // Must be exactly 10 digits
+    if (digits.length !== 10) {
+      return isEn 
+        ? "Phone number must be exactly 10 digits" 
+        : "Số điện thoại phải có đúng 10 chữ số";
+    }
+    
+    // Must start with 0
+    if (!digits.startsWith("0")) {
+      return isEn 
+        ? "Phone number must start with 0" 
+        : "Số điện thoại phải bắt đầu bằng số 0";
+    }
+    
+    return null; // Valid
+  };
+
+  const normalizeVietnamPhone = (phoneInput: string): string | null => {
+    if (!phoneInput.trim()) return null;
+    const digits = onlyDigits(phoneInput);
+    if (digits.length === 10 && digits.startsWith("0")) {
+      return `+84${digits.slice(1)}`;
+    }
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    
     if (!email.trim() || !fullName.trim()) {
-      alert("Email và họ tên không được để trống.");
+      setError(isEn ? "Email and full name are required" : "Email và họ tên không được để trống");
       return;
     }
+
+    // Validate phone if provided
+    if (phone.trim()) {
+      const phoneError = validatePhone(phone);
+      if (phoneError) {
+        setError(phoneError);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      const body: CreateStaffRequest = { contactEmail: email.trim(), fullName: fullName.trim() };
-      if (phone.trim()) body.phone = phone.trim();
-      const data = await createStaff(body);
-      if (data.emailSent === false) {
-        alert("Tài khoản STAFF đã được tạo thành công. Tuy nhiên không gửi được email thông tin đăng nhập (kiểm tra cấu hình SMTP phía server).");
-      } else {
-        alert("Tài khoản STAFF đã được tạo. Email thông tin đăng nhập đã được gửi.");
+      const body: CreateStaffRequest = { 
+        contactEmail: email.trim(), 
+        fullName: fullName.trim() 
+      };
+      
+      // Normalize phone to +84 format if provided
+      const normalizedPhone = normalizeVietnamPhone(phone);
+      if (normalizedPhone) {
+        body.phone = normalizedPhone;
       }
-      onSuccess();
+      
+      const data = await createStaff(body);
+      
+      if (data.emailSent === false) {
+        setSuccess(
+          isEn 
+            ? "Staff account created successfully. However, login email could not be sent (check SMTP configuration)." 
+            : "Tài khoản STAFF đã được tạo thành công. Tuy nhiên không gửi được email thông tin đăng nhập (kiểm tra cấu hình SMTP phía server)."
+        );
+      } else {
+        setSuccess(
+          isEn 
+            ? "Staff account created successfully. Login credentials have been sent via email." 
+            : "Tài khoản STAFF đã được tạo. Email thông tin đăng nhập đã được gửi."
+        );
+      }
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 2000);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Tạo tài khoản nhân viên vận hành thất bại");
+      setError(e instanceof Error ? e.message : (isEn ? "Failed to create staff account" : "Tạo tài khoản nhân viên vận hành thất bại"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Tạo tài khoản nhân viên vận hành</h3>
-        <p className="mt-1 text-xs text-zinc-500">Tạo mới tài khoản nhân viên để quản trị hệ thống.</p>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Email *</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-900/80 dark:bg-black/90" onClick={onClose} />
+      <div className="relative w-full max-w-md animate-scale-in rounded-3xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Gradient Header */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 px-6 py-8">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          <div className="relative">
+            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+              <UserPlus className="h-6 w-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white">
+              {isEn ? "Create Staff Account" : "Tạo tài khoản nhân viên"}
+            </h3>
+            <p className="mt-2 text-sm text-emerald-50">
+              {isEn 
+                ? "Create a new staff account to manage the system" 
+                : "Tạo mới tài khoản nhân viên để quản trị hệ thống"}
+            </p>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Họ tên *</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="p-6">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {success}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Email Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="staff@example.com"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-emerald-400"
+              />
+            </div>
+
+            {/* Full Name Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Full Name" : "Họ tên"} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                placeholder={isEn ? "Nguyen Van A" : "Nguyễn Văn A"}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-emerald-400"
+              />
+            </div>
+
+            {/* Phone Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Phone Number" : "Số điện thoại"} 
+                <span className="ml-2 text-xs font-normal text-zinc-400">
+                  ({isEn ? "Optional" : "Tùy chọn"})
+                </span>
+              </label>
+              <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800">
+                <span className="inline-flex items-center border-r border-zinc-200 bg-zinc-100 px-3 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                  +84
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={phone}
+                  onChange={(e) => setPhone(onlyDigits(e.target.value).slice(0, 10))}
+                  placeholder="0123456789"
+                  className="w-full border-0 bg-transparent px-3 py-2.5 text-sm text-zinc-900 outline-none dark:text-white"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                {isEn 
+                  ? "Must be 10 digits starting with 0 (e.g., 0123456789)" 
+                  : "Phải có 10 chữ số và bắt đầu bằng số 0 (vd: 0123456789)"}
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Số điện thoại</label>
-            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Tạo"}
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex gap-3">
+            <button
+              type="submit"
+              disabled={loading || !!success}
+              className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isEn ? "Creating..." : "Đang tạo..."}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  {isEn ? "Create" : "Tạo"}
+                </span>
+              )}
             </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">Hủy</button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              {isEn ? "Cancel" : "Hủy"}
+            </button>
           </div>
         </form>
       </div>

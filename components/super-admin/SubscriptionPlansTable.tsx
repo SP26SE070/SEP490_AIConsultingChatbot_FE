@@ -608,57 +608,82 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{isEn ? "Create subscription plan" : "Tạo gói đăng ký"}</h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          {/* Plan Type Dropdown */}
-          <div>
-            <label className="block text-xs text-zinc-500">Loại gói *</label>
-            <select
-              value={planType}
-              onChange={(e) => setPlanType(e.target.value as SubscriptionPlanTypeOption["code"])}
-              required
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            >
-              {types.map((t) => (
-                <option key={t.code} value={t.code}>
-                  {t.code} - {t.defaultName}
-                </option>
-              ))}
-            </select>
-            {selectedType && (
-              <p className="mt-1 text-xs text-zinc-500">
-                {selectedType.defaultName}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-900/80 dark:bg-black/90" onClick={onClose} />
+      <div className="relative max-h-[90vh] w-full max-w-3xl animate-scale-in overflow-hidden rounded-3xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Gradient Header */}
+        <div className="sticky top-0 z-10 overflow-hidden bg-gradient-to-br from-blue-500 via-cyan-500 to-teal-600 px-6 py-6">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          <div className="relative flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+              <Plus className="h-6 w-6 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-xl font-bold text-white">
+                {isEn ? "Create subscription plan" : "Tạo gói đăng ký"}
+              </h3>
+              <p className="mt-1 text-sm text-cyan-50">
+                {isEn ? "Configure plan limits and pricing" : "Cấu hình giới hạn và giá gói"}
               </p>
-            )}
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-xs text-zinc-500">Tên gói *</label>
-            <input 
-              type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              placeholder="Tên hiển thị của gói"
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" 
-            />
-            <p className="mt-1 text-xs text-zinc-400">
-              {isEn ? "Leave empty to use default name" : "Để trống để dùng tên mặc định"}
-            </p>
-          </div>
+        {/* Scrollable Form Content */}
+        <div className="max-h-[calc(90vh-140px)] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-5 p-6">
+            {/* Plan Type Dropdown */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50/30 p-4 dark:border-blue-800/50 dark:bg-blue-950/20">
+              <label className="mb-2 block text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                Loại gói <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={planType}
+                onChange={(e) => setPlanType(e.target.value as SubscriptionPlanTypeOption["code"])}
+                required
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              >
+                {types.map((t) => (
+                  <option key={t.code} value={t.code}>
+                    {t.code} — {t.defaultName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-xs text-zinc-500">Mô tả</label>
-            <input 
-              type="text" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)} 
-              placeholder="Mô tả ngắn về gói"
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" 
-            />
-          </div>
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                Thông tin cơ bản
+              </h4>
+              
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Tên gói
+                </label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  placeholder="Tên hiển thị của gói"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+                <p className="mt-1.5 text-xs text-zinc-500">
+                  {isEn ? "Leave empty to use default name" : "Để trống để dùng tên mặc định"}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">Mô tả</label>
+                <input 
+                  type="text" 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  placeholder="Mô tả ngắn về gói"
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+            </div>
           
           {/* Price Fields with VND */}
           <div className="space-y-2">
@@ -865,23 +890,36 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             </div>
           </div>
 
-          <div className="mt-6 flex gap-2">
+          {/* Submit Buttons */}
+          <div className="sticky bottom-0 flex gap-3 border-t border-zinc-200 bg-white/80 pt-4 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
             <button 
               type="submit" 
               disabled={loading} 
-              className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-600 hover:to-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Tạo"}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isEn ? "Creating..." : "Đang tạo..."}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  {isEn ? "Create plan" : "Tạo gói"}
+                </span>
+              )}
             </button>
             <button 
               type="button" 
               onClick={onClose} 
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700 dark:text-zinc-300"
+              disabled={loading}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             >
-              Hủy
+              {isEn ? "Cancel" : "Hủy"}
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
