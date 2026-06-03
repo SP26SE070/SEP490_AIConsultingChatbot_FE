@@ -166,7 +166,7 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-80 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r-2 border-zinc-200/90 bg-white shadow-2xl shadow-purple-100/50 transition-transform duration-300 dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-black/45 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-80 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-zinc-200/90 bg-white shadow-xl shadow-zinc-200/40 transition-transform duration-300 dark:border-zinc-800/90 dark:bg-zinc-950 dark:shadow-none lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >

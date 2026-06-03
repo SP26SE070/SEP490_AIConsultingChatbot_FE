@@ -72,10 +72,10 @@ export function StaffPortalCard() {
   }, [mounted, load]);
 
   return (
-    <div className="space-y-3 rounded-2xl bg-linear-to-br from-blue-50 to-sky-50 p-4 text-xs dark:from-blue-950/30 dark:to-sky-950/30">
+    <div className="space-y-3 rounded-2xl bg-linear-to-br from-purple-50 to-violet-50 p-4 text-xs dark:from-purple-950/30 dark:to-violet-950/30">
       <div className="flex items-center justify-between">
         <p className="font-semibold text-zinc-800 dark:text-zinc-100">Staff Portal</p>
-        <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-400">
+        <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:text-purple-400">
           {t.active}
         </span>
       </div>

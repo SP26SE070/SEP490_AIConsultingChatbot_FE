@@ -12,6 +12,8 @@ import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { useAppTheme } from "@/lib/use-app-theme";
 import { AppLogo } from "@/components/brand/AppLogo";
+import { getPortalAccent, portalAccentStyles } from "@/lib/portal-accent";
+import { cn } from "@/lib/utils/cn";
 
 const ROLE_EMPLOYEE = "ROLE_EMPLOYEE";
 const ROLE_TENANT_ADMIN = "ROLE_TENANT_ADMIN";
@@ -66,6 +68,8 @@ export function AppHeader() {
   const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
   const { theme, toggleTheme } = useAppTheme();
+  const accent = mounted ? getPortalAccent(roles) : "emerald";
+  const ac = portalAccentStyles[accent];
 
   useEffect(() => {
     getProfile()
@@ -106,7 +110,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 shrink-0 border-b border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <header className="sticky top-0 z-50 shrink-0 border-b border-zinc-200/90 bg-white/95 shadow-[0_1px_0_0_rgba(0,0,0,0.04)] backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-950/95 dark:shadow-[0_1px_0_0_rgba(255,255,255,0.06)]">
       <div className="flex h-14 w-full min-w-0 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-7">
           <Link
@@ -127,11 +131,10 @@ export function AppHeader() {
                 <Link
                   key={href}
                   href={href}
-                  className={`rounded-xl px-3.5 py-1.5 text-sm font-medium leading-none transition ${
-                    isActive
-                      ? "bg-green-500 text-white"
-                      : "rounded-full border border-emerald-500/60 bg-emerald-50 px-4 py-1.5 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
-                  }`}
+                  className={cn(
+                    "rounded-xl px-3.5 py-1.5 text-sm font-medium leading-none transition",
+                    isActive ? ac.navActive : cn("rounded-full border px-4 py-1.5", ac.navInactive)
+                  )}
                 >
                   {label}
                 </Link>
@@ -143,13 +146,14 @@ export function AppHeader() {
           <button
             type="button"
             onClick={() => setIsUserMenuOpen((prev) => !prev)}
-            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 shadow-sm transition sm:px-3 ${
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 shadow-sm transition sm:px-3",
               theme === "dark"
-                ? "border-emerald-500/35 bg-zinc-950/90 text-white hover:border-emerald-400 hover:bg-zinc-900"
-                : "border-emerald-500/45 bg-white text-zinc-900 hover:border-emerald-500 hover:bg-emerald-50"
-            }`}
+                ? cn("bg-zinc-950/90 text-white", ac.headerUserBorder, ac.headerUserBg)
+                : cn("bg-white text-zinc-900", ac.headerUserBorder, ac.headerUserBg)
+            )}
           >
-            <div className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <div className={cn("inline-flex h-6 w-6 items-center justify-center rounded-full text-white", ac.headerAvatar)}>
               <User className="h-4 w-4 text-white" />
             </div>
             <span className={`hidden max-w-36 truncate text-xs font-semibold sm:inline ${theme === "dark" ? "text-white" : "text-zinc-900"}`}>{displayName}</span>
@@ -165,9 +169,9 @@ export function AppHeader() {
 
           {isUserMenuOpen && (
             <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="border-b border-zinc-200 bg-linear-to-br from-emerald-50 to-white px-4 py-3 dark:border-zinc-800 dark:from-emerald-950/20 dark:to-zinc-900">
+              <div className={cn("border-b border-zinc-200 bg-linear-to-br to-white px-4 py-3 dark:border-zinc-800 dark:to-zinc-900", ac.menuHeader)}>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-emerald-600">
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", ac.avatarGradient)}>
                     <User className="h-5 w-5 text-white" />
                   </div>
                   <div>

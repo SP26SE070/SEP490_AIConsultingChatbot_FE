@@ -1,5 +1,10 @@
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { TENANT_ADMIN_BASE } from "@/lib/api/config";
+import {
+  flattenPermissionCategories,
+  type PermissionCategoryDto,
+  type PermissionOption,
+} from "@/lib/permissions";
 
 async function handleTenantAdminResponse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -655,14 +660,18 @@ export async function getTenantFixedRoles(): Promise<RoleResponse[]> {
   return normalizeRoleList(data);
 }
 
-/** Backend returns { category, permissions: { code, ... }[] }[]; we flatten to { code }[] */
-export async function getTenantAvailablePermissions(): Promise<{ code: string; name?: string }[]> {
+/** Backend returns { category, permissions: { code, name, description }[] }[] */
+export async function getTenantAvailablePermissions(): Promise<PermissionOption[]> {
   const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/roles/permissions/available`);
   if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load permissions"));
-  const categories: { category?: string; permissions?: { code: string }[] }[] = await res.json();
-  const flat: { code: string }[] = [];
-  categories.forEach((c) => c.permissions?.forEach((p) => flat.push({ code: p.code })));
-  return flat;
+  const categories: PermissionCategoryDto[] = await res.json();
+  return flattenPermissionCategories(categories);
+}
+
+export async function getTenantPermissionCategories(): Promise<PermissionCategoryDto[]> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/roles/permissions/available`);
+  if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load permissions"));
+  return res.json();
 }
 
 export interface CreateRoleRequest {

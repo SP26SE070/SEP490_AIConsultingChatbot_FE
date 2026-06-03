@@ -422,7 +422,7 @@ export function ImportEmployeesModal({ open, onClose, onSuccess }: ImportEmploye
               {loading ? (
                 <Loader2 className="inline h-4 w-4 animate-spin" />
               ) : (
-                t.confirm(preview.summary.valid)
+                t.confirm(preview?.summary.valid ?? 0)
               )}
             </button>
           </>
