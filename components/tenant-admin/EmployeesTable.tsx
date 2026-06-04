@@ -1,5 +1,6 @@
 "use client";
 
+// Updated modal designs with gradient headers
 import { useState, useEffect } from "react";
 import { MoreVertical, Eye, Pencil, UserCheck, UserX, Key, Trash2, Loader2, X, User, Mail, Building, Calendar, Info } from "lucide-react";
 import {
@@ -644,41 +645,80 @@ function EditUserModal({ user, onClose, onSave, loading }: { user: UserResponse;
   }, [user.id]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateUserInfo}</h3>
-        <div className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.fullName}</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
+              <Pencil className="h-5 w-5 text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">{t.updateUserInfo}</h3>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.department}</label>
-            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-              <option value="">—</option>
-              {departments.map((d) => (<option key={d.id} value={d.id}>{d.name ?? `Department #${d.id}`}</option>))}
-            </select>
-            {metaLoading && <p className="mt-1 text-xs text-zinc-500">{t.loadingDepartments}</p>}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.fullName}</label>
+              <input 
+                type="text" 
+                value={fullName} 
+                onChange={(e) => setFullName(e.target.value)} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" 
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.department}</label>
+              <select 
+                value={departmentId} 
+                onChange={(e) => setDepartmentId(e.target.value === "" ? "" : Number(e.target.value))} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="">—</option>
+                {departments.map((d) => (<option key={d.id} value={d.id}>{d.name ?? `Department #${d.id}`}</option>))}
+              </select>
+              {metaLoading && <p className="mt-1.5 text-xs text-zinc-500">{t.loadingDepartments}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.role}</label>
+              <select 
+                value={roleId} 
+                onChange={(e) => setRoleId(e.target.value === "" ? "" : Number(e.target.value))} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="">—</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name ?? r.code ?? `Role #${r.id}`}
+                  </option>
+                ))}
+              </select>
+              {metaLoading && <p className="mt-1.5 text-xs text-zinc-500">{language === "en" ? "Loading roles..." : "Đang tải danh sách vai trò..."}</p>}
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.role}</label>
-            <select value={roleId} onChange={(e) => setRoleId(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white">
-              <option value="">—</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name ?? r.code ?? `Role #${r.id}`}
-                </option>
-              ))}
-            </select>
-            {metaLoading && <p className="mt-1 text-xs text-zinc-500">{language === "en" ? "Loading roles..." : "Đang tải danh sách vai trò..."}</p>}
+
+          <div className="mt-6 flex gap-3">
+            <button 
+              type="button" 
+              onClick={() => onSave({ fullName, departmentId: departmentId === "" ? undefined : departmentId, roleId: roleId === "" ? undefined : roleId })} 
+              disabled={loading} 
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? t.saving : t.save}
+            </button>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+            >
+              {t.cancel}
+            </button>
           </div>
-        </div>
-        <div className="mt-6 flex gap-2">
-          <button type="button" onClick={() => onSave({ fullName, departmentId: departmentId === "" ? undefined : departmentId, roleId: roleId === "" ? undefined : roleId })} disabled={loading} className="rounded-xl bg-purple-500 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600 disabled:opacity-50">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : t.save}
-          </button>
-          <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">{t.cancel}</button>
         </div>
       </div>
     </div>
@@ -711,63 +751,76 @@ function UpdatePermissionsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateUserPermissions}</h3>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          {(user.fullName ?? user.email ?? "User")} - {t.selectPermissions}
-        </p>
-
-        <div className="mt-4 max-h-[52vh] overflow-y-auto rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-          {permissions.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t.noPermissions}</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {permissions.map((p) => {
-                const active = selected.includes(p.code);
-                return (
-                  <button
-                    key={p.code}
-                    type="button"
-                    onClick={() => togglePermission(p.code)}
-                    className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-                      active
-                        ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                    }`}
-                  >
-                    <div className="font-medium">
-                      {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
-                    </div>
-                    <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-70">{p.code}</div>
-                  </button>
-                );
-              })}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20">
+              <Key className="h-5 w-5 text-blue-400" />
             </div>
-          )}
-        </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">{t.updateUserPermissions}</h3>
+              <p className="text-sm text-zinc-400">
+                {(user.fullName ?? user.email ?? "User")} - {t.selectPermissions}
+              </p>
+            </div>
+          </div>
 
-        <div className="mt-5 flex items-center justify-between">
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            {isEn ? "Selected" : "Đã chọn"}: {selected.length}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
-            >
-              {t.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={loading}
-              className="rounded-xl bg-purple-500 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-600 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : t.save}
-            </button>
+          <div className="mt-5 max-h-[52vh] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+            {permissions.length === 0 ? (
+              <p className="text-center text-sm text-zinc-500">{t.noPermissions}</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {permissions.map((p) => {
+                  const active = selected.includes(p.code);
+                  return (
+                    <button
+                      key={p.code}
+                      type="button"
+                      onClick={() => togglePermission(p.code)}
+                      className={`rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                        active
+                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20"
+                          : "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600"
+                      }`}
+                    >
+                      <div className="font-medium">
+                        {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
+                      </div>
+                      <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-60">{p.code}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 flex items-center justify-between gap-4">
+            <span className="text-xs font-medium text-zinc-400">
+              {isEn ? "Selected" : "Đã chọn"}: <span className="text-blue-400">{selected.length}</span>
+            </span>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              >
+                {t.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={onSave}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 disabled:opacity-60"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? t.saving : t.save}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -647,9 +647,9 @@ export default function StaffOrganizationsPage() {
             setDetailModalOpen(false);
             setSelectedTenant(null);
           }} />
-          <div className="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
-            {/* Header with gradient */}
-            <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-purple-500 to-violet-600 px-6 py-8">
+          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
+            {/* Header with gradient - Sticky */}
+            <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-purple-500 to-violet-600 px-6 py-8">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -674,14 +674,15 @@ export default function StaffOrganizationsPage() {
               </div>
             </div>
             
-            {/* Content */}
-            {!selectedTenant ? (
-              <div className="flex items-center justify-center gap-2 py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-                <span className="text-sm text-zinc-500">{t.loading}</span>
-              </div>
-            ) : (
-              <div className="space-y-4 p-6">
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto">
+              {!selectedTenant ? (
+                <div className="flex items-center justify-center gap-2 py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                  <span className="text-sm text-zinc-500">{t.loading}</span>
+                </div>
+              ) : (
+                <div className="space-y-4 p-6">
                 {/* Organization Info Card */}
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
                   <div className="mb-3 flex items-center gap-2">
@@ -886,9 +887,10 @@ export default function StaffOrganizationsPage() {
                 </div>
               </div>
             )}
+            </div>
 
-            {/* Footer */}
-            <div className="border-t border-zinc-800 px-6 py-4">
+            {/* Footer - Sticky */}
+            <div className="shrink-0 border-t border-zinc-800 px-6 py-4">
               <button
                 type="button"
                 onClick={() => {

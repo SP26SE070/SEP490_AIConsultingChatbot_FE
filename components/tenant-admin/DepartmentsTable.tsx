@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, MoreVertical, Power } from "lucide-react";
+import { Pencil, MoreVertical, Power, Loader2 } from "lucide-react";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
 import {
   getTenantDepartments,
@@ -314,56 +314,82 @@ function EditDepartmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateDepartment}</h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.code}</label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20">
+              <Pencil className="h-5 w-5 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">{t.updateDepartment}</h3>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.name}</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.description}</label>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
-          </div>
-          <label className="flex items-center gap-2 pt-1 text-sm text-zinc-700 dark:text-zinc-200">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="rounded text-green-500" />
-            {t.active}
-          </label>
-          <div className="mt-6 flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-60"
-            >
-              {loading ? t.saving : t.save}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
-            >
-              {t.cancel}
-            </button>
-          </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.code}</label>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.name}</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.description}</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none"
+              />
+            </div>
+            
+            <label className="inline-flex items-center gap-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 cursor-pointer hover:bg-zinc-800 transition">
+              <span className="text-sm font-medium text-zinc-200">{t.active}</span>
+              <span className="relative inline-flex h-6 w-11 items-center">
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                />
+                <span className="absolute inset-0 rounded-full bg-zinc-700 transition peer-checked:bg-emerald-500" />
+                <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+              </span>
+            </label>
+
+            <div className="mt-6 flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition hover:bg-purple-600 disabled:opacity-60"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? t.saving : t.save}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

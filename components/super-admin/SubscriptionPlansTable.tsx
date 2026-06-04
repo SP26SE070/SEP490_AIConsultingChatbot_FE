@@ -20,6 +20,24 @@ import { useConfirmDialog } from "@/components/ui";
 
 type Filter = "all" | "active";
 
+// Helper functions for number formatting (shared by all modals)
+function formatNumber(value: string): string {
+  const num = value.replace(/[^\d]/g, '');
+  if (!num) return '';
+  return Number(num).toLocaleString('vi-VN');
+}
+
+function parseNumber(value: string): string {
+  return value.replace(/\./g, '');
+}
+
+function createPriceChangeHandler(setter: (v: string) => void) {
+  return (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseNumber(e.target.value);
+    setter(raw);
+  };
+}
+
 function getLocalizedPlanName(code?: string | null, fallback?: string | null, isEn?: boolean) {
   const normalized = (code ?? "").toUpperCase();
   const enMap: Record<string, string> = {
@@ -546,23 +564,6 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     return Number.isFinite(n) ? n : fallback;
   };
 
-  // Format number with comma separator (Vietnamese style)
-  const formatNumber = (value: string): string => {
-    const num = value.replace(/[^\d]/g, '');
-    if (!num) return '';
-    return Number(num).toLocaleString('vi-VN');
-  };
-
-  // Parse formatted number back to plain number
-  const parseNumber = (value: string): string => {
-    return value.replace(/\./g, '');
-  };
-
-  const handlePriceChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = parseNumber(e.target.value);
-    setter(raw);
-  };
-
   const selectedType = types.find((t) => t.code === planType);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -695,7 +696,7 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   <input 
                     type="text" 
                     value={formatNumber(monthlyPrice)} 
-                    onChange={handlePriceChange(setMonthlyPrice)}
+                    onChange={createPriceChangeHandler(setMonthlyPrice)}
                     placeholder="0"
                     className="w-full rounded-xl border border-zinc-300 px-3 py-2 pr-12 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" 
                   />
@@ -708,7 +709,7 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   <input 
                     type="text" 
                     value={formatNumber(quarterlyPrice)} 
-                    onChange={handlePriceChange(setQuarterlyPrice)}
+                    onChange={createPriceChangeHandler(setQuarterlyPrice)}
                     placeholder="0"
                     className="w-full rounded-xl border border-zinc-300 px-3 py-2 pr-12 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" 
                   />
@@ -721,7 +722,7 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
                   <input 
                     type="text" 
                     value={formatNumber(yearlyPrice)} 
-                    onChange={handlePriceChange(setYearlyPrice)}
+                    onChange={createPriceChangeHandler(setYearlyPrice)}
                     placeholder="0"
                     className="w-full rounded-xl border border-zinc-300 px-3 py-2 pr-12 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" 
                   />
@@ -984,110 +985,362 @@ function EditPlanModal({ plan, onClose, onSuccess }: { plan: SubscriptionPlanRes
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{isEn ? `Update plan: ${plan.code}` : `Cập nhật gói: ${plan.code}`}</h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs text-zinc-500">Tên *</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-xs text-zinc-500">Mô tả</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="block text-xs text-zinc-500">Giá tháng</label>
-              <input type="number" min="0" value={monthlyPrice} onChange={(e) => setMonthlyPrice(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-900/80 dark:bg-black/90" onClick={onClose} />
+      <div className="relative max-h-[90vh] w-full max-w-3xl animate-scale-in overflow-hidden rounded-3xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Gradient Header */}
+        <div className="sticky top-0 z-10 overflow-hidden bg-gradient-to-br from-purple-500 via-violet-500 to-purple-600 px-6 py-6">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <Pencil className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-bold text-white">
+                  {isEn ? `Update Plan: ${plan.code}` : `Cập nhật gói: ${plan.code}`}
+                </h3>
+                <p className="mt-1 text-sm text-purple-50">
+                  {isEn ? "Modify plan configuration" : "Chỉnh sửa cấu hình gói"}
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Giá quý</label>
-              <input type="number" min="0" value={quarterlyPrice} onChange={(e) => setQuarterlyPrice(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Giá năm</label>
-              <input type="number" min="0" value={yearlyPrice} onChange={(e) => setYearlyPrice(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="block text-xs text-zinc-500">{isEn ? "Max users" : "Người dùng tối đa"}</label>
-              <input type="number" min="1" value={maxUsers} onChange={(e) => setMaxUsers(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">{isEn ? "Max documents" : "Tài liệu tối đa"}</label>
-              <input type="number" min="0" value={maxDocuments} onChange={(e) => setMaxDocuments(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">{isEn ? "Max storage (GB)" : "Dung lượng tối đa (GB)"}</label>
-              <input type="number" min="1" value={maxStorageGb} onChange={(e) => setMaxStorageGb(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-zinc-500">Max API Calls</label>
-              <input type="number" min="0" value={maxApiCalls} onChange={(e) => setMaxApiCalls(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Max Chatbot Requests</label>
-              <input type="number" min="0" value={maxChatbotRequests} onChange={(e) => setMaxChatbotRequests(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Max RAG Documents</label>
-              <input type="number" min="0" value={maxRagDocuments} onChange={(e) => setMaxRagDocuments(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Max AI Tokens</label>
-              <input type="number" min="0" value={maxAiTokens} onChange={(e) => setMaxAiTokens(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Context Window Tokens</label>
-              <input type="number" min="1" value={contextWindowTokens} onChange={(e) => setContextWindowTokens(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">RAG Chunk Size</label>
-              <input type="number" min="256" value={ragChunkSize} onChange={(e) => setRagChunkSize(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-zinc-500">AI Model</label>
-              <input type="text" value={aiModel} onChange={(e) => setAiModel(e.target.value)} placeholder="gpt-4" className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500">Embedding Model</label>
-              <input type="text" value={embeddingModel} onChange={(e) => setEmbeddingModel(e.target.value)} placeholder="text-embedding-ada-002" className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-zinc-500">Features</label>
-            <input type="text" value={features} onChange={(e) => setFeatures(e.target.value)} placeholder="Basic features" className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-
-          <div>
-            <label className="block text-xs text-zinc-500">{isEn ? "Display order" : "Thứ tự hiển thị"}</label>
-            <input type="number" min="0" value={displayOrder} onChange={(e) => setDisplayOrder(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="rounded text-green-500" />
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">{isEn ? "Active" : "Đang hoạt động"}</span>
-          </label>
-          
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin inline" /> : "Lưu"}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-white/20 p-2 text-white backdrop-blur-sm transition hover:bg-white/30"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700 dark:text-zinc-300">Hủy</button>
           </div>
-        </form>
+        </div>
+
+        {/* Scrollable Form Content */}
+        <div className="max-h-[calc(90vh-140px)] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-5 p-6">
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "Basic Information" : "Thông tin cơ bản"}
+              </h4>
+              
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  {isEn ? "Plan Name" : "Tên gói"} <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  required 
+                  placeholder={isEn ? "Plan display name" : "Tên hiển thị của gói"}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  {isEn ? "Description" : "Mô tả"}
+                </label>
+                <input 
+                  type="text" 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)} 
+                  placeholder={isEn ? "Short plan description" : "Mô tả ngắn về gói"}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                />
+              </div>
+            </div>
+          
+            {/* Pricing Section */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "Pricing" : "Giá gói"}
+              </h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Monthly Price" : "Giá tháng"}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={formatNumber(monthlyPrice)} 
+                      onChange={createPriceChangeHandler(setMonthlyPrice)}
+                      placeholder="0"
+                      className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 pr-12 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">VND</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Quarterly Price" : "Giá quý"}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={formatNumber(quarterlyPrice)} 
+                      onChange={createPriceChangeHandler(setQuarterlyPrice)}
+                      placeholder="0"
+                      className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 pr-12 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">VND</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Yearly Price" : "Giá năm"}
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={formatNumber(yearlyPrice)} 
+                      onChange={createPriceChangeHandler(setYearlyPrice)}
+                      placeholder="0"
+                      className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 pr-12 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">VND</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          
+            {/* Resource Limits */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "Resource Limits" : "Giới hạn tài nguyên"}
+              </h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Max Users" : "Người dùng tối đa"}
+                  </label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={maxUsers} 
+                    onChange={(e) => setMaxUsers(e.target.value)} 
+                    placeholder="10"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Max Documents" : "Tài liệu tối đa"}
+                  </label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={maxDocuments} 
+                    onChange={(e) => setMaxDocuments(e.target.value)} 
+                    placeholder="100"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    {isEn ? "Storage (GB)" : "Dung lượng (GB)"}
+                  </label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={maxStorageGb} 
+                    onChange={(e) => setMaxStorageGb(e.target.value)} 
+                    placeholder="5"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Limits */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "Advanced Limits" : "Giới hạn nâng cao"}
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Max API Calls</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={maxApiCalls} 
+                    onChange={(e) => setMaxApiCalls(e.target.value)} 
+                    placeholder="10000"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Max Chatbot Requests</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={maxChatbotRequests} 
+                    onChange={(e) => setMaxChatbotRequests(e.target.value)} 
+                    placeholder="1000"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Max RAG Documents</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={maxRagDocuments} 
+                    onChange={(e) => setMaxRagDocuments(e.target.value)} 
+                    placeholder="500"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Max AI Tokens</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    value={maxAiTokens} 
+                    onChange={(e) => setMaxAiTokens(e.target.value)} 
+                    placeholder="100000"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Context Window Tokens</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={contextWindowTokens} 
+                    onChange={(e) => setContextWindowTokens(e.target.value)} 
+                    placeholder="4096"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">RAG Chunk Size</label>
+                  <input 
+                    type="number" 
+                    min="256" 
+                    value={ragChunkSize} 
+                    onChange={(e) => setRagChunkSize(e.target.value)} 
+                    placeholder="512"
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* AI Models */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "AI Configuration" : "Cấu hình AI"}
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">AI Model</label>
+                  <input 
+                    type="text" 
+                    value={aiModel} 
+                    onChange={(e) => setAiModel(e.target.value)} 
+                    placeholder="gpt-4" 
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Embedding Model</label>
+                  <input 
+                    type="text" 
+                    value={embeddingModel} 
+                    onChange={(e) => setEmbeddingModel(e.target.value)} 
+                    placeholder="text-embedding-ada-002" 
+                    className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Other Settings */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">
+                {isEn ? "Other Settings" : "Cài đặt khác"}
+              </h4>
+              
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Features</label>
+                <input 
+                  type="text" 
+                  value={features} 
+                  onChange={(e) => setFeatures(e.target.value)} 
+                  placeholder="Basic features" 
+                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                  {isEn ? "Display Order" : "Thứ tự hiển thị"}
+                </label>
+                <input 
+                  type="number" 
+                  min="0" 
+                  value={displayOrder} 
+                  onChange={(e) => setDisplayOrder(e.target.value)} 
+                  placeholder="0"
+                  className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white" 
+                />
+              </div>
+
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    checked={isActive} 
+                    onChange={(e) => setIsActive(e.target.checked)} 
+                    className="h-5 w-5 rounded border-zinc-300 text-purple-500 focus:ring-2 focus:ring-purple-500/20" 
+                  />
+                  <div className="flex-1">
+                    <span className="block text-sm font-medium text-zinc-900 dark:text-white">
+                      {isEn ? "Active Plan" : "Gói đang hoạt động"}
+                    </span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {isEn ? "Make this plan available for subscription" : "Cho phép gói này được đăng ký"}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="sticky bottom-0 flex gap-3 border-t border-zinc-200 bg-white/80 pt-4 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:from-purple-600 hover:to-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {isEn ? "Updating..." : "Đang cập nhật..."}
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Pencil className="h-4 w-4" />
+                    {isEn ? "Update Plan" : "Cập nhật gói"}
+                  </span>
+                )}
+              </button>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                disabled={loading}
+                className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                {isEn ? "Cancel" : "Hủy"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
