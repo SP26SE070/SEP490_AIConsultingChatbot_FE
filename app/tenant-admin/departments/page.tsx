@@ -108,66 +108,82 @@ function CreateDepartmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Thêm phòng ban</h3>
-        <p className="mt-1 text-xs text-zinc-500">Tạo mới phòng ban trong tổ chức.</p>
-
-        {error && (
-          <p className="mt-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
-            {error}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Code *</label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-              placeholder="HR"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Tên *</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-              placeholder="Phòng Nhân Sự"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Mô tả</label>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-              placeholder="(tuỳ chọn)"
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-teal-500" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20">
+              <Plus className="h-5 w-5 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Thêm phòng ban</h3>
+              <p className="text-xs text-zinc-400">Tạo mới phòng ban trong tổ chức.</p>
+            </div>
           </div>
 
-          <div className="mt-6 flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-            >
-              {loading ? "Đang tạo…" : "Tạo"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
-            >
-              Hủy
-            </button>
-          </div>
-        </form>
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-2.5 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Code *</label>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                placeholder="HR"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Tên *</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                placeholder="Phòng Nhân Sự"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Mô tả</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                placeholder="(tuỳ chọn)"
+              />
+            </div>
+
+            <div className="mt-6 flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 disabled:opacity-60"
+              >
+                {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                {loading ? "Đang tạo…" : "Tạo"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
