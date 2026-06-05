@@ -6,15 +6,15 @@ import {
   CheckCircle2,
   Info,
   LucideIcon,
-  Warning,
+  AlertTriangle,
   X,
 } from "lucide-react";
 import { useCallback } from "react";
 import {
-  useLanguageStore,
   useNotificationStore,
   type NotificationType,
 } from "@/lib/notification-store";
+import { useLanguageStore } from "@/lib/language-store";
 
 type ToastConfig = {
   icon: LucideIcon;
@@ -52,7 +52,7 @@ const toastConfigs: Record<NotificationType, ToastConfig> = {
     buttonHover: "hover:bg-red-200 dark:hover:bg-red-800/60",
   },
   warning: {
-    icon: Warning,
+    icon: AlertTriangle,
     title: "Cảnh báo",
     iconColor: "text-amber-500",
     bgGradient: "bg-gradient-to-br from-amber-50/95 to-orange-50/95 dark:from-amber-950/90 dark:to-orange-950/90",

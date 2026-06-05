@@ -19,6 +19,7 @@ import { useLivePolling } from "@/lib/hooks/useLivePolling";
 
 const READ_DOCUMENT_AUTHORITIES = ["DOCUMENT_READ", "DOCUMENT_ALL", "ALL"] as const;
 const MANAGE_DOCUMENT_AUTHORITIES = ["DOCUMENT_WRITE", "DOCUMENT_ALL", "ALL"] as const;
+const DELETE_DOCUMENT_AUTHORITIES = ["DOCUMENT_DELETE", "DOCUMENT_ALL", "ALL"] as const;
 
 function hasAnyAuthority(authorities: string[], required: readonly string[]): boolean {
   return authorities.some((authority) => required.includes(authority as (typeof required)[number]));
@@ -176,6 +177,10 @@ export default function DocumentDashboardPage() {
   );
   const canManageDocuments = useMemo(
     () => hasAnyAuthority(authorities, MANAGE_DOCUMENT_AUTHORITIES),
+    [authorities]
+  );
+  const canDeleteDocuments = useMemo(
+    () => hasAnyAuthority(authorities, DELETE_DOCUMENT_AUTHORITIES),
     [authorities]
   );
   const activeTab: "documents" | "upload" =
@@ -350,7 +355,10 @@ export default function DocumentDashboardPage() {
             ) : null
           ) : (
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-              <DocumentsTab mode="library" hideEditActions />
+              <DocumentsTab 
+                mode="library" 
+                hideEditActions={!canManageDocuments && !canDeleteDocuments} 
+              />
             </div>
           )}
         </div>

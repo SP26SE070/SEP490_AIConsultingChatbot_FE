@@ -13,7 +13,7 @@ import {
 import { Loader2, Eye, Filter, ChevronDown } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { AnimatedSegmentedControl } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 type FilterMode = "all" | "active";
 

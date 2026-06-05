@@ -6,7 +6,7 @@ import type { MySubscriptionResponse } from "@/lib/api/subscription";
 import { cancelSubscription, toggleAutoRenew } from "@/lib/api/subscription";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 interface SubscriptionInfoProps {
   subscription: MySubscriptionResponse | null;

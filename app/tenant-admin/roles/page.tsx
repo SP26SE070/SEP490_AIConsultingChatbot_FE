@@ -6,7 +6,7 @@ import { getPermissionLabel } from "@/lib/permission-labels";
 import { PermissionSelector } from "@/components/permissions/PermissionSelector";
 import type { PermissionOption } from "@/lib/permissions";
 import { AnimatedSegmentedControl, ErrorNotice, useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 import {
   createTenantRole,
   deleteTenantRole,

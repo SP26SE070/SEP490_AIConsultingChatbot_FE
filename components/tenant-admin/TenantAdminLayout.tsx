@@ -15,7 +15,7 @@ import { translations } from "@/lib/translations";
 import type { OnboardingMyOverviewResponse } from "@/types/onboarding";
 import { motion } from "framer-motion";
 import { DashboardAnimatedBackground } from "@/components/ui/DashboardAnimatedBackground";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 interface TenantAdminLayoutProps {
   children: React.ReactNode;

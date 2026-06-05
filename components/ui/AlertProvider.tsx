@@ -9,9 +9,10 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ToastContainer, toast } from "@/components/ui/Toast";
+import { ToastContainer } from "@/components/ui/Toast";
 import { parseApiErrorMessage } from "@/lib/api/parseApiError";
 import { useLanguageStore } from "@/lib/language-store";
+import { useNotificationStore } from "@/lib/notification-store";
 
 type NotificationType = "error" | "success" | "info";
 
@@ -95,14 +96,12 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       const parsedMessage = parseApiErrorMessage(normalizedMessage);
       const type = detectTone(parsedMessage);
 
-      // Show as toast notification
-      if (type === "success") {
-        toast.success(parsedMessage);
-      } else if (type === "error") {
-        toast.error(parsedMessage);
-      } else {
-        toast.info(parsedMessage);
-      }
+      // Show as toast notification using notification store
+      const { addNotification } = useNotificationStore.getState();
+      addNotification({
+        message: parsedMessage,
+        type: type === "success" ? "success" : type === "error" ? "error" : "info",
+      });
 
       // Also set notification state for modal style if needed
       setNotificationState({
@@ -216,7 +215,4 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-
-// Export convenience functions for direct use
-export { toast } from "@/components/ui/Toast";
 

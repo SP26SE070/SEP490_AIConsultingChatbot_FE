@@ -22,7 +22,7 @@ import {
 import { dashboardPanelClass } from "@/lib/dashboard-ui";
 import { cn } from "@/lib/utils/cn";
 import { useLanguageStore } from "@/lib/language-store";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 import type {
   OnboardingModuleResponse,
   UpdateOnboardingModuleRequest,

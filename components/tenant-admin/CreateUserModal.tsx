@@ -6,7 +6,7 @@ import { getTenantRoles, getTenantDepartments, createTenantUser, type CreateUser
 import { useLanguageStore } from "@/lib/language-store";
 import { getRoleLevelDisplayLabel } from "@/lib/role-levels";
 import { AnimatedModal } from "@/components/ui/AnimatedModal";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 interface CreateUserModalProps {
   open: boolean;

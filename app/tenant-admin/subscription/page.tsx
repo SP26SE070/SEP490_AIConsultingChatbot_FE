@@ -28,7 +28,7 @@ import { getStoredUser } from "@/lib/auth-store";
 import { useLanguageStore } from "@/lib/language-store";
 import { notifyTenantSubscriptionUpdated } from "@/lib/subscription-sync";
 import { translations } from "@/lib/translations";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 type TabId = "plans" | "history" | "upcoming";
 

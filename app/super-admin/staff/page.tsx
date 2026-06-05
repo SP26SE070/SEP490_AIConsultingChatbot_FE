@@ -14,7 +14,7 @@ import {
 import { UserPlus, MoreVertical, Eye, UserCheck, UserX, Trash2, Loader2, Search } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 export default function StaffManagementPage() {
   const { language } = useLanguageStore();
