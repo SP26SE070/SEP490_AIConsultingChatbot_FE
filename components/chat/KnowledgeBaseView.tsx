@@ -18,7 +18,7 @@ import { getTenantActiveDepartments, getTenantRoles, type DepartmentResponse, ty
 import { listCategoriesFlat } from "@/lib/api/categories";
 import { listTagsActive } from "@/lib/api/tags";
 import { ChatbotEntryLoading, ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 export function KnowledgeBaseView() {
   const { language } = useLanguageStore();

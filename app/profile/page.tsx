@@ -54,7 +54,7 @@ import {
 } from "@/lib/date-of-birth";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 function formatDateTime(iso: string | null, locale: string): string {
   if (!iso) return "—";

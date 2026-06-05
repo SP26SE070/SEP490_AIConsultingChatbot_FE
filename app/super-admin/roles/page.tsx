@@ -15,7 +15,7 @@ import {
 import { Eye, Loader2, MoreVertical, Pencil, Plus, Search, Shield, Trash2 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 export default function SuperAdminRolesPage() {
   const { language } = useLanguageStore();

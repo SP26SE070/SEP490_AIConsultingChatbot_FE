@@ -17,7 +17,7 @@ import {
 import { MoreVertical, Pencil, Trash2, Loader2, Eye, Plus, Power, PowerOff } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 type Filter = "all" | "active";
 

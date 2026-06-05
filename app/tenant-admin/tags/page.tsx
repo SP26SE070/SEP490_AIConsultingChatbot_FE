@@ -19,7 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 import { 
   listTagsManage, 
   deleteTag, 

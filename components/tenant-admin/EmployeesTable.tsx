@@ -27,7 +27,7 @@ import { getStoredUser } from "@/lib/auth-store";
 import { mergeRolesWithCache, readTenantRolesCache } from "@/lib/tenant-roles-cache";
 import { getPermissionLabel } from "@/lib/permission-labels";
 import { AnimatedSegmentedControl, ErrorNotice, useConfirmDialog } from "@/components/ui";
-import { toast } from "@/components/ui/AlertProvider";
+import { toast } from "@/lib/notification-store";
 
 /** Không gán user thường làm admin nền tảng / tenant admin / staff */
 const ROLE_CODES_EXCLUDED_FROM_USER_ASSIGNMENT = new Set(["TENANT_ADMIN", "SUPER_ADMIN", "STAFF"]);
@@ -648,66 +648,103 @@ function EditUserModal({ user, onClose, onSave, loading }: { user: UserResponse;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
-      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
-        {/* Gradient header */}
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header bar */}
         <div className="shrink-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
         
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20">
-              <Pencil className="h-5 w-5 text-emerald-400" />
+          {/* Header with icon and close button */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 ring-1 ring-emerald-500/30">
+                <Pencil className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">{t.updateUserInfo}</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">{user.email}</p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-white">{t.updateUserInfo}</h3>
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.fullName}</label>
+            {/* Full Name field with icon */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-3">
+                <User className="h-3.5 w-3.5" />
+                {t.fullName}
+              </label>
               <input 
                 type="text" 
                 value={fullName} 
                 onChange={(e) => setFullName(e.target.value)} 
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" 
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-500 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20" 
+                placeholder={language === "en" ? "Enter full name" : "Nhập họ tên"}
               />
             </div>
             
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.department}</label>
+            {/* Department field with icon */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-3">
+                <Building className="h-3.5 w-3.5" />
+                {t.department}
+              </label>
               <select 
                 value={departmentId} 
                 onChange={(e) => setDepartmentId(e.target.value === "" ? "" : Number(e.target.value))} 
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <option value="">—</option>
+                <option value="">— {language === "en" ? "Select Department" : "Chọn phòng ban"} —</option>
                 {departments.map((d) => (<option key={d.id} value={d.id}>{d.name ?? `Department #${d.id}`}</option>))}
               </select>
-              {metaLoading && <p className="mt-1.5 text-xs text-zinc-500">{t.loadingDepartments}</p>}
+              {metaLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {t.loadingDepartments}
+                </div>
+              )}
             </div>
             
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.role}</label>
+            {/* Role field with icon */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-3">
+                <Key className="h-3.5 w-3.5" />
+                {t.role}
+              </label>
               <select 
                 value={roleId} 
                 onChange={(e) => setRoleId(e.target.value === "" ? "" : Number(e.target.value))} 
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <option value="">—</option>
+                <option value="">— {language === "en" ? "Select Role" : "Chọn vai trò"} —</option>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name ?? r.code ?? `Role #${r.id}`}
                   </option>
                 ))}
               </select>
-              {metaLoading && <p className="mt-1.5 text-xs text-zinc-500">{language === "en" ? "Loading roles..." : "Đang tải danh sách vai trò..."}</p>}
+              {metaLoading && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {language === "en" ? "Loading roles..." : "Đang tải danh sách vai trò..."}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Action buttons */}
           <div className="mt-6 flex gap-3">
             <button 
               type="button" 
               onClick={() => onSave({ fullName, departmentId: departmentId === "" ? undefined : departmentId, roleId: roleId === "" ? undefined : roleId })} 
               disabled={loading} 
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600 disabled:opacity-60"
+              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-teal-600 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? t.saving : t.save}
@@ -715,7 +752,7 @@ function EditUserModal({ user, onClose, onSave, loading }: { user: UserResponse;
             <button 
               type="button" 
               onClick={onClose} 
-              className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:border-zinc-600"
             >
               {t.cancel}
             </button>
@@ -754,61 +791,121 @@ function UpdatePermissionsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
-        {/* Gradient header */}
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header bar */}
         <div className="shrink-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600" />
         
         <div className="p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20">
-              <Key className="h-5 w-5 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white">{t.updateUserPermissions}</h3>
-              <p className="text-sm text-zinc-400">
-                {(user.fullName ?? user.email ?? "User")} - {t.selectPermissions}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 max-h-[52vh] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-            {permissions.length === 0 ? (
-              <p className="text-center text-sm text-zinc-500">{t.noPermissions}</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {permissions.map((p) => {
-                  const active = selected.includes(p.code);
-                  return (
-                    <button
-                      key={p.code}
-                      type="button"
-                      onClick={() => togglePermission(p.code)}
-                      className={`rounded-xl border px-3 py-2.5 text-left text-sm transition ${
-                        active
-                          ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20"
-                          : "border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600"
-                      }`}
-                    >
-                      <div className="font-medium">
-                        {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
-                      </div>
-                      <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-60">{p.code}</div>
-                    </button>
-                  );
-                })}
+          {/* Header with icon and close button */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 ring-1 ring-blue-500/30">
+                <Key className="h-6 w-6 text-blue-400" />
               </div>
-            )}
+              <div>
+                <h3 className="text-xl font-bold text-white">{t.updateUserPermissions}</h3>
+                <p className="text-sm text-zinc-400 mt-0.5">
+                  {user.fullName ?? user.email ?? "User"}
+                </p>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-4">
-            <span className="text-xs font-medium text-zinc-400">
-              {isEn ? "Selected" : "Đã chọn"}: <span className="text-blue-400">{selected.length}</span>
-            </span>
+          {/* Info banner */}
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
+            <Info className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
+            <div className="text-sm text-zinc-300">
+              {isEn 
+                ? "Select the permissions this user should have. Click on permission cards to toggle selection." 
+                : "Chọn các quyền mà người dùng này nên có. Nhấp vào các thẻ quyền để chọn/bỏ chọn."}
+            </div>
+          </div>
+
+          {/* Permissions grid */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-white">
+                {isEn ? "Available Permissions" : "Quyền khả dụng"}
+              </h4>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-zinc-400">{isEn ? "Selected:" : "Đã chọn:"}</span>
+                <span className="inline-flex items-center justify-center rounded-full bg-blue-500/20 px-2.5 py-0.5 font-semibold text-blue-400">
+                  {selected.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto pr-2">
+              {permissions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-800">
+                    <Key className="h-8 w-8 text-zinc-600" />
+                  </div>
+                  <p className="text-sm text-zinc-500">{t.noPermissions}</p>
+                </div>
+              ) : (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {permissions.map((p) => {
+                    const active = selected.includes(p.code);
+                    return (
+                      <button
+                        key={p.code}
+                        type="button"
+                        onClick={() => togglePermission(p.code)}
+                        className={`group relative overflow-hidden rounded-xl border px-4 py-3.5 text-left transition-all ${
+                          active
+                            ? "border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 shadow-lg shadow-emerald-500/10"
+                            : "border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800 hover:border-zinc-600"
+                        }`}
+                      >
+                        {/* Selection indicator */}
+                        {active && (
+                          <div className="absolute top-2 right-2">
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className={`font-semibold transition ${active ? "text-emerald-300" : "text-zinc-200 group-hover:text-white"}`}>
+                          {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
+                        </div>
+                        <div className={`mt-1 text-[11px] font-mono uppercase tracking-wider transition ${active ? "text-emerald-400/80" : "text-zinc-500 group-hover:text-zinc-400"}`}>
+                          {p.code}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => setSelected([])}
+              disabled={selected.length === 0}
+              className="text-sm font-medium text-zinc-400 transition hover:text-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isEn ? "Clear All" : "Bỏ chọn tất cả"}
+            </button>
+            
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+                className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:border-zinc-600"
               >
                 {t.cancel}
               </button>
@@ -816,7 +913,7 @@ function UpdatePermissionsModal({
                 type="button"
                 onClick={onSave}
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:bg-blue-600 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:shadow-blue-500/40 hover:from-blue-600 hover:to-indigo-600 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {loading ? t.saving : t.save}
