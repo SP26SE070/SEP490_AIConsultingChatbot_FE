@@ -94,7 +94,7 @@ export function OnboardingModuleEditorModal({
   const submitLabel = state.id ? labels.saveChanges : labels.createNow;
 
   return createPortal(
-    <div className="onboarding-module-editor-overlay fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6">
+    <div className="onboarding-module-editor-overlay fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 sm:p-6">
       <div
         className="absolute inset-0 bg-zinc-950/70 backdrop-blur-[6px]"
         onClick={onClose}
@@ -105,10 +105,13 @@ export function OnboardingModuleEditorModal({
         role="dialog"
         aria-modal
         aria-labelledby="onboarding-module-editor-title"
-        className="relative flex w-full max-w-4xl max-h-[min(88dvh,52rem)] flex-col overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-[0_24px_80px_-12px_rgba(0,0,0,0.45)] dark:border-zinc-700/90 dark:bg-zinc-950"
+        className="relative my-8 flex w-full max-w-4xl max-h-[calc(100vh-4rem)] flex-col overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-[0_24px_80px_-12px_rgba(0,0,0,0.45)] dark:border-zinc-700/90 dark:bg-zinc-950"
       >
-        <div className="relative shrink-0 border-b border-zinc-200/90 px-5 py-4 dark:border-zinc-800 sm:px-6">
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-blue-500 via-cyan-400 to-blue-600" />
+        {/* Gradient header bar */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-600" />
+        
+        {/* Header content */}
+        <div className="shrink-0 border-b border-zinc-200/90 px-5 py-4 dark:border-zinc-800 sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 pr-2">
               <h2

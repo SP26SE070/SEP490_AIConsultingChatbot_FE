@@ -663,58 +663,103 @@ function CreateRoleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.addCustomRole}</h3>
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">
-              {language === "en" ? "Code *" : "Mã *"}
-            </label>
-            <input value={form.code} onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm uppercase dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="HR_MANAGER" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20">
+              <Shield className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">{t.addCustomRole}</h3>
+              <p className="text-xs text-zinc-400">{language === "en" ? "Create a new custom role" : "Tạo vai trò tùy chỉnh mới"}</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.roleLabel} *</label>
-            <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" placeholder="HR Manager" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Role level" : "Cấp bậc"} *</label>
-            <select
-              value={form.level}
-              onChange={(e) => setForm((p) => ({ ...p, level: Number(e.target.value) }))}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            >
-              {ROLE_LEVEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.description}</label>
-            <textarea value={form.description ?? ""} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              {language === "en" ? "Permissions" : "Quyền"}
-            </label>
-            <PermissionSelector
-              selected={form.permissions}
-              options={permissions}
-              onChange={(next) => setForm((p) => ({ ...p, permissions: next }))}
-            />
-          </div>
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? (language === "en" ? "Creating…" : "Đang tạo…") : language === "en" ? "Create role" : "Tạo role"}
-            </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
-              {t.cancel}
-            </button>
-          </div>
-        </form>
+
+          <form onSubmit={submit} className="mt-5 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                {language === "en" ? "Code *" : "Mã *"}
+              </label>
+              <input 
+                value={form.code} 
+                onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 uppercase transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                placeholder="HR_MANAGER" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.roleLabel} *</label>
+              <input 
+                value={form.name} 
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                placeholder="HR Manager" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{language === "en" ? "Role level" : "Cấp bậc"} *</label>
+              <select
+                value={form.level}
+                onChange={(e) => setForm((p) => ({ ...p, level: Number(e.target.value) }))}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {ROLE_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.description}</label>
+              <textarea 
+                value={form.description ?? ""} 
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} 
+                rows={3}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-2">
+                {language === "en" ? "Permissions" : "Quyền"}
+              </label>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
+                <PermissionSelector
+                  selected={form.permissions}
+                  options={permissions}
+                  onChange={(next) => setForm((p) => ({ ...p, permissions: next }))}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3 pt-2">
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-600 disabled:opacity-60"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? (language === "en" ? "Creating…" : "Đang tạo…") : language === "en" ? "Create role" : "Tạo role"}
+              </button>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -800,67 +845,111 @@ function EditRoleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-          {language === "en" ? "Edit custom role" : "Sửa vai trò tùy chỉnh"}
-        </h3>
-        <p className="mt-1 text-xs text-zinc-500">
-          {language === "en" ? "Code" : "Mã"}: {role.code ?? "—"} (
-          {language === "en" ? "cannot change" : "không đổi được"})
-        </p>
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.roleLabel}</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header */}
+        <div className="shrink-0 h-1 bg-gradient-to-r from-purple-500 via-violet-500 to-fuchsia-500" />
+        
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20">
+              <Pencil className="h-5 w-5 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">
+                {language === "en" ? "Edit custom role" : "Sửa vai trò tùy chỉnh"}
+              </h3>
+              <p className="text-xs text-zinc-400">
+                {language === "en" ? "Update role details and permissions" : "Cập nhật chi tiết và quyền"}
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Description" : "Mô tả"}</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
+
+          {/* Role code info card */}
+          <div className="mb-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-2.5">
+            <p className="text-xs text-indigo-300">
+              <span className="font-medium">{language === "en" ? "Code" : "Mã"}:</span> {role.code ?? "—"} 
+              <span className="ml-2 text-indigo-400/70">({language === "en" ? "cannot change" : "không đổi được"})</span>
+            </p>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{language === "en" ? "Role level" : "Cấp bậc"}</label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(Number(e.target.value))}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            >
-              {ROLE_LEVEL_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-zinc-500">
-              {language === "en"
-                ? "Permissions — currently granted are highlighted; tap to turn on or off"
-                : "Quyền — quyền đang gán được tô sáng; bấm để bật/tắt"}
-            </label>
-            {permsLoading ? (
-              <div className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-8 text-sm text-zinc-500 dark:border-zinc-700">
-                <Loader2 className="h-5 w-5 animate-spin text-green-500" />
-                {language === "en" ? "Loading current permissions…" : "Đang tải quyền hiện tại…"}
-              </div>
-            ) : (
-              <PermissionSelector
-                selected={selectedPermissions}
-                options={permissionsForUi}
-                onChange={setSelectedPermissions}
+
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.roleLabel}</label>
+              <input 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20" 
               />
-            )}
-          </div>
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? (language === "en" ? "Saving…" : "Đang lưu…") : t.save}
-            </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
-              {t.cancel}
-            </button>
-          </div>
-        </form>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{language === "en" ? "Description" : "Mô tả"}</label>
+              <textarea 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                rows={3}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none" 
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">{language === "en" ? "Role level" : "Cấp bậc"}</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(Number(e.target.value))}
+                className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              >
+                {ROLE_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-2">
+                {language === "en"
+                  ? "Permissions — currently granted are highlighted; tap to turn on or off"
+                  : "Quyền — quyền đang gán được tô sáng; bấm để bật/tắt"}
+              </label>
+              {permsLoading ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-8 text-sm text-zinc-400">
+                  <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
+                  {language === "en" ? "Loading current permissions…" : "Đang tải quyền hiện tại…"}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3">
+                  <PermissionSelector
+                    selected={selectedPermissions}
+                    options={permissionsForUi}
+                    onChange={setSelectedPermissions}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex gap-3 pt-2">
+              <button 
+                type="submit" 
+                disabled={loading} 
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition hover:bg-purple-600 disabled:opacity-60"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? (language === "en" ? "Saving…" : "Đang lưu…") : t.save}
+              </button>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

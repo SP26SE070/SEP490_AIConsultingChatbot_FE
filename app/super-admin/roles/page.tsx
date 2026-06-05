@@ -670,46 +670,160 @@ function EditRoleModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
+  const { language } = useLanguageStore();
+  const isEn = language === "en";
   const [name, setName] = useState(role.name ?? "");
   const [description, setDescription] = useState(role.description ?? "");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(false);
     setLoading(true);
     try {
       await updateAdminRole(role.id, { name: name.trim(), description: description.trim() || undefined });
-      onSuccess();
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 1500);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Cập nhật vai trò thất bại");
+      const message = e instanceof Error ? e.message : isEn ? "Update role failed" : "Cập nhật vai trò thất bại";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Cập nhật vai trò</h3>
-        <p className="mt-1 text-xs text-zinc-500">Mã: {role.code ?? "—"} (không thể thay đổi)</p>
-        <form onSubmit={submit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Tên</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">Mô tả</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 h-20 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white" />
-          </div>
-          <div className="mt-6 flex gap-2">
-            <button type="submit" disabled={loading} className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50">
-              {loading ? "Đang lưu..." : "Lưu"}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-900/80 dark:bg-black/90" onClick={onClose} />
+      <div className="relative w-full max-w-lg animate-scale-in overflow-hidden rounded-3xl border border-zinc-200/50 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+        {/* Gradient Header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-600 px-6 py-8">
+          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <Pencil className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-bold text-white">
+                  {isEn ? "Update Role" : "Cập nhật vai trò"}
+                </h3>
+                <p className="mt-1 text-sm text-purple-50">
+                  {role.code ?? "—"}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl bg-white/20 p-2 text-white backdrop-blur-sm transition hover:bg-white/30"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
-            <button type="button" onClick={onClose} className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">Hủy</button>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={submit} className="p-6">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800/60 dark:bg-red-950/40 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {isEn ? "Role updated successfully!" : "Vai trò đã được cập nhật thành công!"}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Code Display (Read-only) */}
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/30 p-4 dark:border-indigo-800/50 dark:bg-indigo-950/20">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                {isEn ? "Role Code" : "Mã vai trò"}
+              </label>
+              <p className="font-mono text-sm font-bold text-zinc-900 dark:text-white">
+                {role.code ?? "—"}
+              </p>
+              <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                {isEn ? "Cannot be changed" : "Không thể thay đổi"}
+              </p>
+            </div>
+
+            {/* Name Input */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Role Name" : "Tên vai trò"} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder={isEn ? "Enter role name" : "Nhập tên vai trò"}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-indigo-400"
+              />
+            </div>
+
+            {/* Description Textarea */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {isEn ? "Description" : "Mô tả"}
+                <span className="ml-2 text-xs font-normal text-zinc-400">({isEn ? "Optional" : "Tùy chọn"})</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                placeholder={isEn ? "Enter role description..." : "Nhập mô tả vai trò..."}
+                className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:border-indigo-400"
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="mt-6 flex gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-600 hover:to-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isEn ? "Updating..." : "Đang cập nhật..."}
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <Pencil className="h-4 w-4" />
+                  {isEn ? "Update Role" : "Cập nhật vai trò"}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              {isEn ? "Cancel" : "Hủy"}
+            </button>
           </div>
         </form>
       </div>
     </div>
   );
 }
+
