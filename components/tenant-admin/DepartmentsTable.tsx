@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Pencil, MoreVertical, Power } from "lucide-react";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 import {
   getTenantDepartments,
   getTenantActiveDepartments,
@@ -126,7 +127,7 @@ export function DepartmentsTable({
       setOpenMenuId(null);
       setMenuPos(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : t.error);
+      toast.error(e instanceof Error ? e.message : t.error);
     } finally {
       setActionLoadingId(null);
     }

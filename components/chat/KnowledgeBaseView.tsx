@@ -18,6 +18,7 @@ import { getTenantActiveDepartments, getTenantRoles, type DepartmentResponse, ty
 import { listCategoriesFlat } from "@/lib/api/categories";
 import { listTagsActive } from "@/lib/api/tags";
 import { ChatbotEntryLoading, ChatbotSpinner } from "@/components/chat/ChatbotEntryLoading";
+import { toast } from "@/components/ui/AlertProvider";
 
 export function KnowledgeBaseView() {
   const { language } = useLanguageStore();
@@ -104,7 +105,7 @@ export function KnowledgeBaseView() {
       loadDocuments();
     } catch (error) {
       console.error("Upload failed:", error);
-      alert(language === "en" ? "Upload failed" : "Tải lên thất bại");
+      toast.error(language === "en" ? "Upload failed" : "Tải lên thất bại");
     } finally {
       setUploading(false);
     }
@@ -120,7 +121,7 @@ export function KnowledgeBaseView() {
       loadDocuments();
     } catch (error) {
       console.error("Delete failed:", error);
-      alert(language === "en" ? "Delete failed" : "Xóa thất bại");
+      toast.error(language === "en" ? "Delete failed" : "Xóa thất bại");
     }
   };
 
@@ -152,7 +153,7 @@ export function KnowledgeBaseView() {
       loadDocuments();
     } catch (error) {
       console.error("Update version failed:", error);
-      alert(language === "en" ? "Update failed" : "Cập nhật thất bại");
+      toast.error(language === "en" ? "Update failed" : "Cập nhật thất bại");
     } finally {
       setUpdating(false);
     }
@@ -192,7 +193,7 @@ export function KnowledgeBaseView() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download failed:", error);
-      alert(language === "en" ? "Download failed" : "Tải xuống thất bại");
+      toast.error(language === "en" ? "Download failed" : "Tải xuống thất bại");
     } finally {
       setDownloadingId(null);
     }

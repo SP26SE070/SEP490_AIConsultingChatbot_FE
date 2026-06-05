@@ -15,6 +15,7 @@ import { translations } from "@/lib/translations";
 import type { OnboardingMyOverviewResponse } from "@/types/onboarding";
 import { motion } from "framer-motion";
 import { DashboardAnimatedBackground } from "@/components/ui/DashboardAnimatedBackground";
+import { toast } from "@/components/ui/AlertProvider";
 
 interface TenantAdminLayoutProps {
   children: React.ReactNode;
@@ -124,7 +125,7 @@ export function TenantAdminLayout({ children }: TenantAdminLayoutProps) {
       return overview;
     } catch (error) {
       if (!options.silent) {
-        alert(
+        toast.error(
           error instanceof Error
             ? error.message
             : isEn
@@ -161,7 +162,7 @@ export function TenantAdminLayout({ children }: TenantAdminLayoutProps) {
         return true;
       } catch (error) {
         setOnboardingOverview(previousOverview);
-        alert(
+        toast.error(
           error instanceof Error
             ? error.message
             : isEn

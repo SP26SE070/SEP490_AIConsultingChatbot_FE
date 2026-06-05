@@ -54,6 +54,7 @@ import {
 } from "@/lib/date-of-birth";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
+import { toast } from "@/components/ui/AlertProvider";
 
 function formatDateTime(iso: string | null, locale: string): string {
   if (!iso) return "—";
@@ -288,7 +289,7 @@ export default function ProfilePage() {
       }
       const normalizedPhone = normalizeVietnamPhoneFromInput(phoneNumber);
       if (phoneNumber.trim() && !normalizedPhone) {
-        alert(
+        toast.warning(
           language === "en"
             ? "Phone number is invalid. Suggested format: +84 0123456789 or +84 123456789."
             : "Số điện thoại không hợp lệ. Gợi ý định dạng: +84 0123456789 hoặc +84 123456789."

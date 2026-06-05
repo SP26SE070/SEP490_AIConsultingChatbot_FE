@@ -22,6 +22,7 @@ import {
 import { dashboardPanelClass } from "@/lib/dashboard-ui";
 import { cn } from "@/lib/utils/cn";
 import { useLanguageStore } from "@/lib/language-store";
+import { toast } from "@/components/ui/AlertProvider";
 import type {
   OnboardingModuleResponse,
   UpdateOnboardingModuleRequest,
@@ -273,13 +274,13 @@ export default function StaffOnboardingPage() {
 
   useEffect(() => {
     if (!error) return;
-    alert(error);
+    toast.error(error);
     setError(null);
   }, [error]);
 
   useEffect(() => {
     if (!notice) return;
-    alert(notice);
+    toast.info(notice);
     setNotice(null);
   }, [notice]);
 

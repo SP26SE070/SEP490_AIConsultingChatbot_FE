@@ -22,6 +22,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 import { 
   listCategoriesTree,
   listCategoriesManage,
@@ -127,7 +128,7 @@ function CategoryModal({
       onSuccess();
       onClose();
     } catch (e) {
-      alert(isEn ? "Failed to save category" : "Lưu danh mục thất bại");
+      toast.error(isEn ? "Failed to save category" : "Lưu danh mục thất bại");
       console.error(e);
     } finally {
       setSaving(false);
@@ -530,7 +531,7 @@ export default function CategoriesPage() {
       await deleteCategoryPermanently(id);
       await loadCategories();
     } catch (e) {
-      alert(isEn ? "Failed to delete category" : "Xóa danh mục thất bại");
+      toast.error(isEn ? "Failed to delete category" : "Xóa danh mục thất bại");
       console.error(e);
     } finally {
       setDeletingId(null);
@@ -539,7 +540,7 @@ export default function CategoriesPage() {
 
   const handleToggleStatus = async (category: Category) => {
     if (category.status === "ACTIVE" && hasActiveDescendants(category)) {
-      alert(
+      toast.warning(
         isEn
           ? "Cannot deactivate this category while it still has active sub-categories. Please deactivate or move child categories first."
           : "Không thể vô hiệu hóa danh mục này khi vẫn còn danh mục con đang active. Vui lòng vô hiệu hóa hoặc di chuyển danh mục con trước."
@@ -581,7 +582,7 @@ export default function CategoriesPage() {
     } catch (e) {
       const fallbackMessage = isEn ? "Failed to update status" : "Cập nhật trạng thái thất bại";
       const errorMessage = e instanceof Error && e.message ? e.message : fallbackMessage;
-      alert(errorMessage);
+      toast.error(errorMessage);
     }
   };
 

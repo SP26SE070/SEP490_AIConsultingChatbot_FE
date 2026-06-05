@@ -14,6 +14,7 @@ import {
 import { UserPlus, MoreVertical, Eye, UserCheck, UserX, Trash2, Loader2, Search } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 
 export default function StaffManagementPage() {
   const { language } = useLanguageStore();
@@ -96,7 +97,7 @@ export default function StaffManagementPage() {
     setActionLoading(userId);
     activateStaff(userId)
       .then(load)
-      .catch((e) => alert(e instanceof Error ? e.message : "Lỗi"))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Lỗi"))
       .finally(() => setActionLoading(null));
   };
 
@@ -106,7 +107,7 @@ export default function StaffManagementPage() {
     setActionLoading(userId);
     deactivateStaff(userId)
       .then(load)
-      .catch((e) => alert(e instanceof Error ? e.message : "Lỗi"))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Lỗi"))
       .finally(() => setActionLoading(null));
   };
 
@@ -127,7 +128,7 @@ export default function StaffManagementPage() {
     setActionLoading(userId);
     deleteStaff(userId)
       .then(load)
-      .catch((e) => alert(e instanceof Error ? e.message : "Lỗi"))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Lỗi"))
       .finally(() => setActionLoading(null));
   };
 
@@ -136,7 +137,7 @@ export default function StaffManagementPage() {
     setMenuPos(null);
     getStaffById(userId)
       .then(setDetailUser)
-      .catch((e) => alert(e instanceof Error ? e.message : "Lỗi"));
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Lỗi"));
   };
 
   const filtered = search.trim()

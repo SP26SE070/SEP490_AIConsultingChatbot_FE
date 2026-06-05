@@ -28,6 +28,7 @@ import { getStoredUser } from "@/lib/auth-store";
 import { useLanguageStore } from "@/lib/language-store";
 import { notifyTenantSubscriptionUpdated } from "@/lib/subscription-sync";
 import { translations } from "@/lib/translations";
+import { toast } from "@/components/ui/AlertProvider";
 
 type TabId = "plans" | "history" | "upcoming";
 
@@ -387,7 +388,7 @@ export default function TenantAdminSubscriptionPage() {
       subscription.status === "TRIAL";
 
     if (isTrialSubscription) {
-      window.alert(
+      toast.warning(
         language === "en"
           ? "Auto-renew is not available for free trial plans."
           : "Gói dùng thử miễn phí không hỗ trợ tự động gia hạn."
@@ -404,7 +405,7 @@ export default function TenantAdminSubscriptionPage() {
       void loadSubscription({ silent: true });
     } catch (e) {
       console.error("Failed to toggle auto-renew:", e);
-      window.alert(
+      toast.error(
         e instanceof Error
           ? e.message
           : language === "en"

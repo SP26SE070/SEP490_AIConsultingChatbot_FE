@@ -17,6 +17,7 @@ import {
 import { MoreVertical, Pencil, Trash2, Loader2, Eye, Plus, Power, PowerOff } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 
 type Filter = "all" | "active";
 
@@ -109,7 +110,7 @@ export function SubscriptionPlansTable() {
       await action();
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : isEn ? "Error" : "Lỗi");
+      toast.error(e instanceof Error ? e.message : isEn ? "Error" : "Lỗi");
     } finally {
       setActionLoading(null);
     }
@@ -601,7 +602,7 @@ function CreatePlanModal({ onClose, onSuccess }: { onClose: () => void; onSucces
     } catch (err) {
       console.error("❌ Error creating plan:", err);
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
-      alert(`${isEn ? "Failed to create plan" : "Tạo gói thất bại"}\n\n${errorMsg}`);
+      toast.error(`${isEn ? "Failed to create plan" : "Tạo gói thất bại"}\n\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -977,7 +978,7 @@ function EditPlanModal({ plan, onClose, onSuccess }: { plan: SubscriptionPlanRes
       onSuccess();
     } catch (err) {
       console.error("❌ Error updating plan:", err);
-      alert(err instanceof Error ? err.message : "Cập nhật thất bại");
+      toast.error(err instanceof Error ? err.message : "Cập nhật thất bại");
     } finally {
       setLoading(false);
     }

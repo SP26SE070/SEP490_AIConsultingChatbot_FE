@@ -26,6 +26,7 @@ import { getStoredUser } from "@/lib/auth-store";
 import { mergeRolesWithCache, readTenantRolesCache } from "@/lib/tenant-roles-cache";
 import { getPermissionLabel } from "@/lib/permission-labels";
 import { AnimatedSegmentedControl, ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 
 /** Không gán user thường làm admin nền tảng / tenant admin / staff */
 const ROLE_CODES_EXCLUDED_FROM_USER_ASSIGNMENT = new Set(["TENANT_ADMIN", "SUPER_ADMIN", "STAFF"]);
@@ -119,7 +120,7 @@ export function EmployeesTable() {
     setActionLoading(userId);
     activateTenantUser(userId)
       .then(loadUsers)
-      .catch((e) => alert(e instanceof Error ? e.message : genericError))
+      .catch((e) => toast.error(e instanceof Error ? e.message : genericError))
       .finally(() => setActionLoading(null));
   };
 
@@ -129,7 +130,7 @@ export function EmployeesTable() {
     setActionLoading(userId);
     deactivateTenantUser(userId)
       .then(loadUsers)
-      .catch((e) => alert(e instanceof Error ? e.message : genericError))
+      .catch((e) => toast.error(e instanceof Error ? e.message : genericError))
       .finally(() => setActionLoading(null));
   };
 
@@ -138,8 +139,8 @@ export function EmployeesTable() {
     setMenuPos(null);
     setActionLoading(userId);
     resetTenantUserPassword(userId)
-      .then(() => alert(t.passwordResetSent))
-      .catch((e) => alert(e instanceof Error ? e.message : genericError))
+      .then(() => toast.success(t.passwordResetSent))
+      .catch((e) => toast.error(e instanceof Error ? e.message : genericError))
       .finally(() => setActionLoading(null));
   };
 
@@ -158,7 +159,7 @@ export function EmployeesTable() {
     setActionLoading(userId);
     deleteTenantUser(userId)
       .then(loadUsers)
-      .catch((e) => alert(e instanceof Error ? e.message : genericError))
+      .catch((e) => toast.error(e instanceof Error ? e.message : genericError))
       .finally(() => setActionLoading(null));
   };
 
@@ -167,7 +168,7 @@ export function EmployeesTable() {
     setMenuPos(null);
     getTenantUserById(userId)
       .then(setDetailUser)
-      .catch((e) => alert(e instanceof Error ? e.message : genericError));
+      .catch((e) => toast.error(e instanceof Error ? e.message : genericError));
   };
 
   const openEdit = (user: UserResponse) => {
@@ -191,7 +192,7 @@ export function EmployeesTable() {
       setAvailablePermissions(permissions);
       setSelectedPermissions(currentPermissions);
     } catch (e) {
-      alert(e instanceof Error ? e.message : genericError);
+      toast.error(e instanceof Error ? e.message : genericError);
     } finally {
       setPermissionMetaLoading(false);
     }
@@ -204,7 +205,7 @@ export function EmployeesTable() {
       setEditUser(null);
       loadUsers();
     } catch (e) {
-      alert(e instanceof Error ? e.message : genericError);
+      toast.error(e instanceof Error ? e.message : genericError);
     } finally {
       setActionLoading(null);
     }
@@ -418,7 +419,7 @@ export function EmployeesTable() {
               setPermissionUser(null);
               loadUsers();
             } catch (e) {
-              alert(e instanceof Error ? e.message : genericError);
+              toast.error(e instanceof Error ? e.message : genericError);
             } finally {
               setActionLoading(null);
             }

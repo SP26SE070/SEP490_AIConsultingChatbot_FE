@@ -15,6 +15,7 @@ import {
 import { Eye, Loader2, MoreVertical, Pencil, Plus, Search, Shield, Trash2 } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 
 export default function SuperAdminRolesPage() {
   const { language } = useLanguageStore();
@@ -79,13 +80,13 @@ export default function SuperAdminRolesPage() {
       const data = await getAdminRoleById(roleId);
       setDetail(data);
     } catch (e) {
-      alert(e instanceof Error ? e.message : isEn ? "Cannot fetch role details" : "Không thể lấy chi tiết vai trò");
+      toast.error(e instanceof Error ? e.message : isEn ? "Cannot fetch role details" : "Không thể lấy chi tiết vai trò");
     }
   };
 
   const onDelete = async (role: AdminRoleResponse) => {
     if (role.isSystemRole) {
-      alert(isEn ? "Cannot delete a system role." : "Không thể xóa vai trò hệ thống.");
+      toast.warning(isEn ? "Cannot delete a system role." : "Không thể xóa vai trò hệ thống.");
       return;
     }
     const ok = await confirm({
@@ -106,7 +107,7 @@ export default function SuperAdminRolesPage() {
       await deleteAdminRole(role.id);
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : isEn ? "Delete role failed" : "Xóa vai trò thất bại");
+      toast.error(e instanceof Error ? e.message : isEn ? "Delete role failed" : "Xóa vai trò thất bại");
     } finally {
       setActionLoadingId(null);
     }
@@ -680,7 +681,7 @@ function EditRoleModal({
       await updateAdminRole(role.id, { name: name.trim(), description: description.trim() || undefined });
       onSuccess();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Cập nhật vai trò thất bại");
+      toast.error(e instanceof Error ? e.message : "Cập nhật vai trò thất bại");
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import type { MySubscriptionResponse } from "@/lib/api/subscription";
 import { cancelSubscription, toggleAutoRenew } from "@/lib/api/subscription";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
+import { toast } from "@/components/ui/AlertProvider";
 
 interface SubscriptionInfoProps {
   subscription: MySubscriptionResponse | null;
@@ -47,7 +48,7 @@ export function SubscriptionInfo({
       setCancelReason("");
       onUpdated?.();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Hủy gói thất bại");
+      toast.error(e instanceof Error ? e.message : "Hủy gói thất bại");
     } finally {
       setCancelLoading(false);
     }
@@ -61,7 +62,7 @@ export function SubscriptionInfo({
       await toggleAutoRenew(next);
       onUpdated?.();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Cập nhật thất bại");
+      toast.error(e instanceof Error ? e.message : "Cập nhật thất bại");
     } finally {
       setAutoRenewLoading(false);
     }

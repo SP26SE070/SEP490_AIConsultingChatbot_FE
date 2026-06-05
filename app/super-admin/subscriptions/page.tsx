@@ -13,6 +13,7 @@ import {
 import { Loader2, Eye, Filter, ChevronDown } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 import { AnimatedSegmentedControl } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 
 type FilterMode = "all" | "active";
 
@@ -62,7 +63,7 @@ export default function SubscriptionsPage() {
   const handleViewDetail = (id: string) => {
     getAdminSubscriptionById(id)
       .then(setDetail)
-      .catch((e) => alert(e instanceof Error ? e.message : isEn ? "Error" : "Lỗi"));
+      .catch((e) => toast.error(e instanceof Error ? e.message : isEn ? "Error" : "Lỗi"));
   };
 
   return (

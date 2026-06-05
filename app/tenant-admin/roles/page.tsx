@@ -6,6 +6,7 @@ import { getPermissionLabel } from "@/lib/permission-labels";
 import { PermissionSelector } from "@/components/permissions/PermissionSelector";
 import type { PermissionOption } from "@/lib/permissions";
 import { AnimatedSegmentedControl, ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/components/ui/AlertProvider";
 import {
   createTenantRole,
   deleteTenantRole,
@@ -187,13 +188,13 @@ export default function TenantAdminRolesPage() {
       const data = await getTenantRoleById(roleId);
       setDetail(data);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Không thể xem chi tiết role");
+      toast.error(e instanceof Error ? e.message : "Không thể xem chi tiết role");
     }
   };
 
   const onDeleteRole = async (role: RoleResponse) => {
     if (isFixedRole(role)) {
-      alert("Role cố định không thể xóa.");
+      toast.warning("Role cố định không thể xóa.");
       return;
     }
     const ok = await confirm({
@@ -213,7 +214,7 @@ export default function TenantAdminRolesPage() {
       await load();
       await persistFullCatalog();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Xóa role thất bại");
+      toast.error(e instanceof Error ? e.message : "Xóa role thất bại");
     } finally {
       setActionLoadingId(null);
     }
@@ -391,7 +392,7 @@ export default function TenantAdminRolesPage() {
                 setMenuPos(null);
                 if (!role) return;
                 if (isFixedRole(role)) {
-                  alert("Role cố định không thể sửa.");
+                  toast.warning("Role cố định không thể sửa.");
                   return;
                 }
                 setEditRole(role);
@@ -641,7 +642,7 @@ function CreateRoleModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.code.trim() || !form.name.trim()) {
-      alert(language === "en" ? "Code and role name are required." : "Code và tên role là bắt buộc.");
+      toast.warning(language === "en" ? "Code and role name are required." : "Code và tên role là bắt buộc.");
       return;
     }
     setLoading(true);
@@ -655,7 +656,7 @@ function CreateRoleModal({
       });
       onSuccess();
     } catch (e) {
-      alert(e instanceof Error ? e.message : language === "en" ? "Failed to create role." : "Tạo role thất bại");
+      toast.error(e instanceof Error ? e.message : language === "en" ? "Failed to create role." : "Tạo role thất bại");
     } finally {
       setLoading(false);
     }
@@ -775,7 +776,7 @@ function EditRoleModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedPermissions.length === 0) {
-      alert(
+      toast.warning(
         language === "en"
           ? "Choose at least one permission (server requires a non-empty list)."
           : "Chọn ít nhất một quyền (máy chủ yêu cầu danh sách không rỗng)."
@@ -792,7 +793,7 @@ function EditRoleModal({
       });
       onSuccess();
     } catch (e) {
-      alert(e instanceof Error ? e.message : language === "en" ? "Failed to update role." : "Cập nhật role thất bại");
+      toast.error(e instanceof Error ? e.message : language === "en" ? "Failed to update role." : "Cập nhật role thất bại");
     } finally {
       setLoading(false);
     }

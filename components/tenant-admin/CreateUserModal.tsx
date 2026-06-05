@@ -6,6 +6,7 @@ import { getTenantRoles, getTenantDepartments, createTenantUser, type CreateUser
 import { useLanguageStore } from "@/lib/language-store";
 import { getRoleLevelDisplayLabel } from "@/lib/role-levels";
 import { AnimatedModal } from "@/components/ui/AnimatedModal";
+import { toast } from "@/components/ui/AlertProvider";
 
 interface CreateUserModalProps {
   open: boolean;
@@ -69,11 +70,11 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !contactEmail.trim()) {
-      alert("Họ tên và email không được để trống.");
+      toast.warning("Họ tên và email không được để trống.");
       return;
     }
     if (roleId === "" || roleId === undefined) {
-      alert("Vui lòng chọn vai trò.");
+      toast.warning("Vui lòng chọn vai trò.");
       return;
     }
     setLoading(true);
