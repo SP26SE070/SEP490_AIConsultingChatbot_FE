@@ -4,11 +4,25 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createStaffOnboardingModule,
   deactivateStaffOnboardingModule,
+  getStaffOnboardingAvailablePermissions,
   getStaffOnboardingModules,
   uploadStaffOnboardingModuleAttachment,
   updateStaffOnboardingModule,
 } from "@/lib/api/onboarding";
+import {
+  OnboardingModuleEditorModal,
+  type OnboardingEditorLabels,
+} from "@/components/staff/OnboardingModuleEditorModal";
+import { getPermissionLabel } from "@/lib/permission-labels";
+import {
+  buildPermissionLabelMap,
+  resolveTenantPermissionCategories,
+  type PermissionCategoryDto,
+} from "@/lib/permissions";
+import { dashboardPanelClass } from "@/lib/dashboard-ui";
+import { cn } from "@/lib/utils/cn";
 import { useLanguageStore } from "@/lib/language-store";
+import { toast } from "@/lib/notification-store";
 import type {
   OnboardingModuleResponse,
   UpdateOnboardingModuleRequest,
@@ -28,7 +42,7 @@ type EditorState = {
   summary: string;
   displayOrder: number;
   estimatedMinutes: number;
-  requiredPermissions: string;
+  requiredPermissions: string[];
   contentVi: string;
   contentEn: string;
   isActive: boolean;
@@ -63,18 +77,6 @@ function composeBilingualContent(vi: string, en: string): string {
   return `[VI]\n${vi.trim()}\n\n[EN]\n${en.trim()}`;
 }
 
-function permissionsToCsv(permissions: string[]): string {
-  return permissions.join(", ");
-}
-
-function csvToPermissions(csv: string): string[] {
-  if (!csv.trim()) return [];
-  return csv
-    .split(",")
-    .map((item) => item.trim().toUpperCase())
-    .filter((item, idx, arr) => item.length > 0 && arr.indexOf(item) === idx);
-}
-
 function parseInlineBilingual(raw: string): { vi: string; en: string } {
   const normalized = raw.trim();
   const separator = " / ";
@@ -98,7 +100,7 @@ function toEditorState(module?: OnboardingModuleResponse): EditorState {
       summary: "",
       displayOrder: 1,
       estimatedMinutes: 10,
-      requiredPermissions: "",
+      requiredPermissions: [],
       contentVi: "",
       contentEn: "",
       isActive: true,
@@ -115,7 +117,7 @@ function toEditorState(module?: OnboardingModuleResponse): EditorState {
     summary: module.summary ?? "",
     displayOrder: module.displayOrder,
     estimatedMinutes: module.estimatedMinutes,
-    requiredPermissions: permissionsToCsv(module.requiredPermissions),
+    requiredPermissions: [...module.requiredPermissions],
     contentVi: parsed.vi,
     contentEn: parsed.en,
     isActive: module.isActive,
@@ -153,15 +155,20 @@ export default function StaffOnboardingPage() {
       editorUpdateTitle: isEn ? "Update onboarding module" : "Cập nhật module onboarding",
       editorHint: isEn
         ? "Content is rendered based on each user's language setting."
-        : "Nội dung sẽ hiển thị theo cài đặt ngôn ngữ của từng người dùng.",
+        : "Nội dung hiển thị theo ngôn ngữ của từng người dùng.",
+      sectionBasics: isEn ? "Basic information" : "Thông tin cơ bản",
+      sectionPermissions: isEn ? "Access requirements" : "Quyền truy cập",
+      sectionPermissionsHint: isEn
+        ? "Users must have all selected permissions to open this module."
+        : "Người dùng cần đủ các quyền đã chọn để mở module này.",
+      sectionFile: isEn ? "Attachment" : "File đính kèm",
+      sectionContent: isEn ? "Bilingual content" : "Nội dung song ngữ",
       formTitle: isEn ? "Title" : "Tiêu đề",
       formSummary: isEn ? "Summary" : "Tóm tắt",
       formDisplayOrder: isEn ? "Display order" : "Thứ tự hiển thị",
       formEstimatedMinutes: isEn ? "Estimated minutes" : "Thời lượng (phút)",
       formActive: isEn ? "Active" : "Hoạt động",
-      formPermissions: isEn
-        ? "Required permissions (comma separated)"
-        : "Quyền yêu cầu (phân tách bằng dấu phẩy)",
+      loadingPermissions: isEn ? "Loading permissions..." : "Đang tải danh sách quyền...",
       formDetailFile: isEn ? "Detail file (.txt or .pdf)" : "File chi tiết module (.txt hoặc .pdf)",
       formCurrentFile: isEn ? "Current file" : "File hiện tại",
       formWillUpload: isEn ? "Will upload on save" : "Sẽ tải lên khi lưu",
@@ -192,6 +199,8 @@ export default function StaffOnboardingPage() {
   );
 
   const [modules, setModules] = useState<OnboardingModuleResponse[]>([]);
+  const [permissionCategories, setPermissionCategories] = useState<PermissionCategoryDto[]>([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -227,14 +236,51 @@ export default function StaffOnboardingPage() {
   }, [loadModules]);
 
   useEffect(() => {
+    let cancelled = false;
+    setPermissionsLoading(true);
+    getStaffOnboardingAvailablePermissions()
+      .then((data) => {
+        if (!cancelled) setPermissionCategories(resolveTenantPermissionCategories(data));
+      })
+      .catch(() => {
+        if (!cancelled) setPermissionCategories(resolveTenantPermissionCategories([]));
+      })
+      .finally(() => {
+        if (!cancelled) setPermissionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const permissionLabelMap = useMemo(
+    () => buildPermissionLabelMap(
+      permissionCategories.flatMap((category) =>
+        (category.permissions ?? []).map((permission) => ({
+          code: permission.code,
+          nameEn: permission.name,
+          nameVi: permission.description,
+        }))
+      )
+    ),
+    [permissionCategories]
+  );
+
+  const formatPermission = useCallback(
+    (code: string) =>
+      getPermissionLabel(code, permissionLabelMap.get(code), isEn ? "en" : "vi"),
+    [permissionLabelMap, isEn]
+  );
+
+  useEffect(() => {
     if (!error) return;
-    alert(error);
+    toast.error(error);
     setError(null);
   }, [error]);
 
   useEffect(() => {
     if (!notice) return;
-    alert(notice);
+    toast.info(notice);
     setNotice(null);
   }, [notice]);
 
@@ -266,7 +312,7 @@ export default function StaffOnboardingPage() {
         summary: editorState.summary.trim() || undefined,
         displayOrder: Number(editorState.displayOrder),
         estimatedMinutes: Number(editorState.estimatedMinutes),
-        requiredPermissions: csvToPermissions(editorState.requiredPermissions),
+        requiredPermissions: editorState.requiredPermissions,
         content: composeBilingualContent(editorState.contentVi, editorState.contentEn),
         isActive: editorState.isActive,
       };
@@ -356,6 +402,53 @@ export default function StaffOnboardingPage() {
     return isEn ? parsed.en : parsed.vi;
   };
 
+  const editorLabels: OnboardingEditorLabels = useMemo(
+    () => ({
+      createTitle: text.editorCreateTitle,
+      updateTitle: text.editorUpdateTitle,
+      hint: text.editorHint,
+      formTitle: text.formTitle,
+      formSummary: text.formSummary,
+      formDisplayOrder: text.formDisplayOrder,
+      formEstimatedMinutes: text.formEstimatedMinutes,
+      formActive: text.formActive,
+      sectionBasics: text.sectionBasics,
+      sectionPermissions: text.sectionPermissions,
+      sectionPermissionsHint: text.sectionPermissionsHint,
+      sectionFile: text.sectionFile,
+      sectionContent: text.sectionContent,
+      loadingPermissions: text.loadingPermissions,
+      formDetailFile: text.formDetailFile,
+      formCurrentFile: text.formCurrentFile,
+      formWillUpload: text.formWillUpload,
+      contentVi: text.contentVi,
+      contentEn: text.contentEn,
+      cancel: text.cancel,
+      saveChanges: text.saveChanges,
+      createNow: text.createNow,
+    }),
+    [text]
+  );
+
+  const handleAttachmentChange = (file: File | null) => {
+    if (!file) {
+      setAttachmentFile(null);
+      return;
+    }
+    const normalizedName = file.name.toLowerCase();
+    if (!normalizedName.endsWith(".txt") && !normalizedName.endsWith(".pdf")) {
+      setError(text.txtPdfOnly);
+      setAttachmentFile(null);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(text.max10mb);
+      setAttachmentFile(null);
+      return;
+    }
+    setAttachmentFile(file);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -377,15 +470,15 @@ export default function StaffOnboardingPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className={cn(dashboardPanelClass, "p-4 sm:p-5")}>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{text.totalModules}</p>
           <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">{modules.length}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className={cn(dashboardPanelClass, "p-4 sm:p-5")}>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{text.activeModules}</p>
           <p className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</p>
         </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className={cn(dashboardPanelClass, "p-4 sm:p-5")}>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">{text.inactiveModules}</p>
           <p className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{modules.length - activeCount}</p>
         </div>
@@ -436,8 +529,16 @@ export default function StaffOnboardingPage() {
                         </span>
                       )}
                       {module.requiredPermissions.length > 0 && (
-                        <span>
-                          {text.requiredPermissions}: {module.requiredPermissions.join(", ")}
+                        <span className="inline-flex flex-wrap items-center gap-1">
+                          <span>{text.requiredPermissions}:</span>
+                          {module.requiredPermissions.map((permission) => (
+                            <span
+                              key={permission}
+                              className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                              {formatPermission(permission)}
+                            </span>
+                          ))}
                         </span>
                       )}
                     </div>
@@ -482,209 +583,19 @@ export default function StaffOnboardingPage() {
         )}
       </div>
 
-      {editorOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-zinc-900/60" onClick={closeEditor} />
-
-          <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              {editorState.id ? text.editorUpdateTitle : text.editorCreateTitle}
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{text.editorHint}</p>
-
-            <form onSubmit={submitEditor} className="mt-5 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.formTitle}</label>
-                  <input
-                    value={editorState.title}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({ ...prev, title: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.formSummary}</label>
-                  <input
-                    value={editorState.summary}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({ ...prev, summary: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.formDisplayOrder}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={editorState.displayOrder}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({
-                        ...prev,
-                        displayOrder: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.formEstimatedMinutes}</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={180}
-                    value={editorState.estimatedMinutes}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({
-                        ...prev,
-                        estimatedMinutes: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <label className="inline-flex items-center gap-2 rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700">
-                    <input
-                      type="checkbox"
-                      checked={editorState.isActive}
-                      onChange={(event) =>
-                        setEditorState((prev) => ({
-                          ...prev,
-                          isActive: event.target.checked,
-                        }))
-                      }
-                    />
-                    {text.formActive}
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500">{text.formPermissions}</label>
-                <input
-                  value={editorState.requiredPermissions}
-                  onChange={(event) =>
-                    setEditorState((prev) => ({
-                      ...prev,
-                      requiredPermissions: event.target.value,
-                    }))
-                  }
-                  placeholder="DOCUMENT_READ, ANALYTICS_VIEW"
-                  className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500">{text.formDetailFile}</label>
-                {editorState.detailFileName && (
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    {text.formCurrentFile}: {editorState.detailFileName}
-                    {editorState.detailFileSize
-                      ? ` (${Math.max(1, Math.round(editorState.detailFileSize / 1024))} KB)`
-                      : ""}
-                  </p>
-                )}
-                <input
-                  type="file"
-                  accept=".txt,.pdf,text/plain,application/pdf"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] ?? null;
-                    if (!file) {
-                      setAttachmentFile(null);
-                      return;
-                    }
-
-                    const normalizedName = file.name.toLowerCase();
-                    if (!normalizedName.endsWith(".txt") && !normalizedName.endsWith(".pdf")) {
-                      setError(text.txtPdfOnly);
-                      event.currentTarget.value = "";
-                      setAttachmentFile(null);
-                      return;
-                    }
-
-                    if (file.size > 10 * 1024 * 1024) {
-                      setError(text.max10mb);
-                      event.currentTarget.value = "";
-                      setAttachmentFile(null);
-                      return;
-                    }
-
-                    setAttachmentFile(file);
-                  }}
-                  className="mt-1 block w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-blue-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:file:bg-blue-900/40 dark:file:text-blue-300"
-                />
-                {attachmentFile && (
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                    {text.formWillUpload}: {attachmentFile.name}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.contentVi}</label>
-                  <textarea
-                    value={editorState.contentVi}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({
-                        ...prev,
-                        contentVi: event.target.value,
-                      }))
-                    }
-                    rows={14}
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm leading-relaxed dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500">{text.contentEn}</label>
-                  <textarea
-                    value={editorState.contentEn}
-                    onChange={(event) =>
-                      setEditorState((prev) => ({
-                        ...prev,
-                        contentEn: event.target.value,
-                      }))
-                    }
-                    rows={14}
-                    className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm leading-relaxed dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeEditor}
-                  className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
-                >
-                  {text.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {editorState.id ? text.saveChanges : text.createNow}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <OnboardingModuleEditorModal
+        open={editorOpen}
+        saving={saving}
+        labels={editorLabels}
+        state={editorState}
+        onChange={(patch) => setEditorState((prev) => ({ ...prev, ...patch }))}
+        permissionCategories={permissionCategories}
+        permissionsLoading={permissionsLoading}
+        attachmentFile={attachmentFile}
+        onAttachmentChange={handleAttachmentChange}
+        onClose={closeEditor}
+        onSubmit={submitEditor}
+      />
 
       {deactivateModalOpen && deactivateTarget && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4">

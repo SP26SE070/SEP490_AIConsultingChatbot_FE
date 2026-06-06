@@ -9,4 +9,5 @@ export { Input } from "./Input";
 export { Select } from "./Select";
 export { useConfirmDialog } from "./ConfirmDialog";
 export { AnimatedSegmentedControl } from "./AnimatedSegmentedControl";
+export { AnimatedModal } from "./AnimatedModal";
 

@@ -13,6 +13,7 @@ import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { useAppTheme } from "@/lib/use-app-theme";
 import { AppLogo } from "@/components/brand/AppLogo";
+import { portalUserMenuPillClass } from "@/lib/dashboard-ui";
 
 const TENANT_FALLBACK_EMAIL = "tenantadmin@company.vn";
 
@@ -101,8 +102,8 @@ export function DashboardHeader({
   };
 
   return (
-    <div className="flex min-h-16 min-w-0 items-center justify-between gap-2 px-0 py-1 sm:gap-3">
-      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+    <div className="flex h-full min-h-0 min-w-0 w-full items-center justify-between gap-2 px-0 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3 lg:ml-2">
         <button
           type="button"
           className="rounded-2xl bg-white p-2.5 text-zinc-700 shadow-sm shadow-zinc-200/70 dark:bg-zinc-950 dark:text-zinc-400 dark:shadow-black/20 sm:p-3.5 lg:hidden"
@@ -114,7 +115,7 @@ export function DashboardHeader({
 
         <Link
           href="/tenant-admin"
-          className="flex h-11 min-w-0 max-w-[9.5rem] items-center gap-2 px-1 transition hover:text-emerald-600 sm:max-w-56 dark:hover:text-emerald-400"
+          className="flex h-11 min-w-0 max-w-[10.5rem] items-center gap-3.5 pl-2 transition hover:text-emerald-600 sm:max-w-60 sm:gap-4 sm:pl-3 dark:hover:text-emerald-400"
         >
           <AppLogo
             size={32}
@@ -122,7 +123,7 @@ export function DashboardHeader({
             tenantName={tenantName}
             className="shrink-0"
           />
-          <div className="min-w-0 leading-tight">
+          <div className="min-w-0 pl-0.5 leading-tight sm:pl-1">
             <p className="hidden truncate text-xs font-medium text-zinc-500 sm:block dark:text-zinc-400">
               Internal Consultant AI
             </p>
@@ -154,7 +155,7 @@ export function DashboardHeader({
         <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 rounded-2xl bg-white px-2.5 py-2 shadow-sm shadow-zinc-200/70 transition hover:bg-zinc-50 sm:px-3.5 sm:py-2.5 dark:bg-zinc-950 dark:shadow-black/20 dark:hover:bg-zinc-900"
+            className={portalUserMenuPillClass}
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-emerald-600">
               <User className="h-4.5 w-4.5 text-white" />

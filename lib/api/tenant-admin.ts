@@ -1,5 +1,10 @@
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { TENANT_ADMIN_BASE } from "@/lib/api/config";
+import {
+  flattenPermissionCategories,
+  type PermissionCategoryDto,
+  type PermissionOption,
+} from "@/lib/permissions";
 
 async function handleTenantAdminResponse<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -502,6 +507,82 @@ export async function resetTenantUserPassword(userId: string): Promise<{ message
   return data;
 }
 
+// ---------- Employee import (Excel) ----------
+export interface EmployeeImportPreviewResponse {
+  importSessionId: string;
+  expiresAt: string;
+  summary: { total: number; valid: number; invalid: number };
+  validRows: Array<{
+    rowNumber: number;
+    stt?: string | null;
+    fullName: string;
+    contactEmail: string;
+    phoneNumber?: string | null;
+    dateOfBirth?: string | null;
+    address?: string | null;
+    roleCode: string;
+    roleName?: string | null;
+    departmentCode?: string | null;
+    departmentName?: string | null;
+  }>;
+  invalidRows: Array<{
+    rowNumber: number;
+    stt?: string | null;
+    fullName?: string | null;
+    contactEmail?: string | null;
+    errors: string[];
+  }>;
+}
+
+export interface EmployeeImportConfirmResponse {
+  createdCount: number;
+  failedCount: number;
+  emailsQueued: number;
+  created: Array<{
+    rowNumber: number;
+    userId: string;
+    fullName: string;
+    loginEmail: string;
+    contactEmail: string;
+  }>;
+  failed: Array<{
+    rowNumber: number;
+    contactEmail?: string | null;
+    message: string;
+  }>;
+}
+
+export async function downloadEmployeeImportTemplate(): Promise<void> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/users/import/template`);
+  if (!res.ok) throw new Error(await res.text().catch(() => "Không tải được file mẫu"));
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "import-nhan-vien-mau.xlsx";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function previewEmployeeImport(file: File): Promise<EmployeeImportPreviewResponse> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/users/import/preview`, {
+    method: "POST",
+    body: form,
+  });
+  return handleTenantAdminResponse<EmployeeImportPreviewResponse>(res);
+}
+
+export async function confirmEmployeeImport(importSessionId: string): Promise<EmployeeImportConfirmResponse> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/users/import/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ importSessionId }),
+  });
+  return handleTenantAdminResponse<EmployeeImportConfirmResponse>(res);
+}
+
 // ---------- Department management (align with API 12) ----------
 export async function getTenantDepartmentById(departmentId: number): Promise<DepartmentResponse> {
   const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/departments/${departmentId}`);
@@ -579,14 +660,18 @@ export async function getTenantFixedRoles(): Promise<RoleResponse[]> {
   return normalizeRoleList(data);
 }
 
-/** Backend returns { category, permissions: { code, ... }[] }[]; we flatten to { code }[] */
-export async function getTenantAvailablePermissions(): Promise<{ code: string; name?: string }[]> {
+/** Backend returns { category, permissions: { code, name, description }[] }[] */
+export async function getTenantAvailablePermissions(): Promise<PermissionOption[]> {
   const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/roles/permissions/available`);
   if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load permissions"));
-  const categories: { category?: string; permissions?: { code: string }[] }[] = await res.json();
-  const flat: { code: string }[] = [];
-  categories.forEach((c) => c.permissions?.forEach((p) => flat.push({ code: p.code })));
-  return flat;
+  const categories: PermissionCategoryDto[] = await res.json();
+  return flattenPermissionCategories(categories);
+}
+
+export async function getTenantPermissionCategories(): Promise<PermissionCategoryDto[]> {
+  const res = await fetchWithAuth(`${TENANT_ADMIN_BASE}/roles/permissions/available`);
+  if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load permissions"));
+  return res.json();
 }
 
 export interface CreateRoleRequest {

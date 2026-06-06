@@ -12,16 +12,79 @@ import type { MessageResponse } from "@/types/auth";
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 async function handleResponse<T>(res: Response): Promise<T> {
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) {
-    if (typeof data.message === "string") throw new Error(data.message);
-    if (typeof data.error === "string") throw new Error(data.error);
-    if (data && typeof data === "object" && !Array.isArray(data)) {
-      const first = Object.values(data).find((v) => typeof v === "string");
-      if (first) throw new Error(String(first));
+  // Get content type to determine how to parse response
+  const contentType = res.headers.get("content-type");
+  const isJson = contentType?.includes("application/json");
+  
+  let data: Record<string, unknown> = {};
+  let rawText = "";
+  
+  if (isJson) {
+    try {
+      data = await res.json();
+    } catch (e) {
+      // JSON parse failed, try to read as text
+      try {
+        rawText = await res.text();
+      } catch {
+        rawText = "";
+      }
     }
-    throw new Error("Request failed");
+  } else {
+    // Non-JSON response, read as text
+    try {
+      rawText = await res.text();
+    } catch {
+      rawText = "";
+    }
   }
+
+  if (!res.ok) {
+    // Try to extract error message in priority order
+    
+    // 1. Check for 'message' field (most common)
+    if (typeof data.message === "string" && data.message.trim()) {
+      throw new Error(data.message.trim());
+    }
+    
+    // 2. Check for 'error' field
+    if (typeof data.error === "string" && data.error.trim()) {
+      throw new Error(data.error.trim());
+    }
+    
+    // 3. Check for 'errors' field (array or object)
+    if (data.errors) {
+      if (Array.isArray(data.errors) && data.errors.length > 0) {
+        const firstError = data.errors[0];
+        if (typeof firstError === "string") throw new Error(firstError);
+        if (firstError && typeof firstError === "object" && "message" in firstError) {
+          throw new Error(String(firstError.message));
+        }
+      } else if (typeof data.errors === "string") {
+        throw new Error(data.errors);
+      }
+    }
+    
+    // 4. Look for any string value in response object
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      const stringValues = Object.entries(data)
+        .filter(([key, value]) => key !== "code" && key !== "status" && typeof value === "string" && String(value).trim())
+        .map(([, value]) => String(value).trim());
+      
+      if (stringValues.length > 0) {
+        throw new Error(stringValues[0]);
+      }
+    }
+    
+    // 5. Use raw text if available
+    if (rawText && rawText.trim()) {
+      throw new Error(rawText.trim());
+    }
+    
+    // 6. Generic error with status code
+    throw new Error(`Request failed with status ${res.status}`);
+  }
+  
   return data as T;
 }
 

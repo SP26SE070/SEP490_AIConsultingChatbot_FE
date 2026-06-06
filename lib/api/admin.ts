@@ -45,8 +45,45 @@ export async function createStaff(body: CreateStaffRequest): Promise<CreateStaff
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || "Failed to create staff");
+  
+  // Try to parse JSON response
+  let data: any = {};
+  try {
+    data = await res.json();
+  } catch {
+    // If JSON parse fails, try to get text
+    const text = await res.text().catch(() => "");
+    if (text) data = { message: text };
+  }
+  
+  if (!res.ok) {
+    // Priority 1: Extract message from response
+    if (typeof data.message === "string" && data.message.trim()) {
+      throw new Error(data.message.trim());
+    }
+    // Priority 2: Extract error field
+    if (typeof data.error === "string" && data.error.trim()) {
+      throw new Error(data.error.trim());
+    }
+    // Priority 3: Look for any string value (but skip "code" and "status")
+    if (data && typeof data === "object") {
+      const stringValues = Object.entries(data)
+        .filter(([key, value]) => 
+          key !== "code" && 
+          key !== "status" && 
+          typeof value === "string" && 
+          String(value).trim()
+        )
+        .map(([, value]) => String(value).trim());
+      
+      if (stringValues.length > 0) {
+        throw new Error(stringValues[0]);
+      }
+    }
+    // Priority 4: Generic error
+    throw new Error("Failed to create staff");
+  }
+  
   return data;
 }
 

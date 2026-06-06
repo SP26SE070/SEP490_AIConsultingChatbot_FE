@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedModal } from "@/components/ui/AnimatedModal";
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -31,14 +32,16 @@ function toneButtonClass(tone: ConfirmTone): string {
 }
 
 function ConfirmDialog({ open, options, onCancel, onConfirm }: ConfirmDialogProps) {
-  if (!open) return null;
-
   const tone = options.tone ?? "default";
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" onClick={onCancel} />
-      <div className="relative w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+    <AnimatedModal
+      open={open}
+      onClose={onCancel}
+      zIndex={9998}
+      backdropClassName="absolute inset-0 bg-black/60"
+      panelClassName="relative w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+    >
         <div className="mb-3 flex items-start gap-3">
           <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
             <AlertTriangle className="h-4 w-4" />
@@ -67,8 +70,7 @@ function ConfirmDialog({ open, options, onCancel, onConfirm }: ConfirmDialogProp
             {options.confirmText ?? "Dong y"}
           </button>
         </div>
-      </div>
-    </div>
+    </AnimatedModal>
   );
 }
 

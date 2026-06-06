@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { 
   Filter, 
-  UserPlus, 
+  UserPlus,
+  FileSpreadsheet,
   Eye, 
   Pencil, 
   UserCheck, 
@@ -44,18 +45,19 @@ import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { getStoredUser } from "@/lib/auth-store";
 import { mergeRolesWithCache, readTenantRolesCache } from "@/lib/tenant-roles-cache";
-import { useConfirmDialog } from "@/components/ui";
+import { useConfirmDialog, AnimatedModal } from "@/components/ui";
 import { getPermissionLabel } from "@/lib/permission-labels";
 
 const ROLE_CODES_EXCLUDED_FROM_USER_ASSIGNMENT = new Set(["TENANT_ADMIN", "SUPER_ADMIN", "STAFF"]);
 
 interface EmployeeManagementNewProps {
   onOpenCreate?: () => void;
+  onOpenImport?: () => void;
   onActionSuccess?: (message: string) => void;
   onActionError?: (message: string) => void;
 }
 
-export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionError }: EmployeeManagementNewProps) {
+export function EmployeeManagementNew({ onOpenCreate, onOpenImport, onActionSuccess, onActionError }: EmployeeManagementNewProps) {
   const { language } = useLanguageStore();
   const t = translations[language];
   const isEn = language === "en";
@@ -80,7 +82,9 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
   const [detailUser, setDetailUser] = useState<UserResponse | null>(null);
   const [editUser, setEditUser] = useState<UserResponse | null>(null);
   const [permissionUser, setPermissionUser] = useState<UserResponse | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<{ code: string; name?: string }[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<
+    import("@/lib/permissions").PermissionOption[]
+  >([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [permissionMetaLoading, setPermissionMetaLoading] = useState(false);
@@ -427,15 +431,26 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
           {isEn ? "Filters" : "Bộ lọc"}
         </button>
 
-        {/* Add Employee */}
-        <button
-          type="button"
-          onClick={onOpenCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/40"
-        >
-          <UserPlus className="h-4 w-4" />
-          {t.addEmployee}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenImport && (
+            <button
+              type="button"
+              onClick={onOpenImport}
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-50 dark:border-emerald-600 dark:bg-zinc-900 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              {t.import}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onOpenCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/40"
+          >
+            <UserPlus className="h-4 w-4" />
+            {t.addEmployee}
+          </button>
+        </div>
       </div>
 
       {/* Filters Panel */}
@@ -738,34 +753,34 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
         </>
       )}
 
-      {/* Detail Modal */}
-      {detailUser && (
-        <DetailModal user={detailUser} onClose={() => setDetailUser(null)} />
-      )}
+      <DetailModal
+        open={detailUser != null}
+        user={detailUser}
+        onClose={() => setDetailUser(null)}
+      />
 
-      {/* Edit Modal */}
-      {editUser && (
-        <EditUserModal
-          user={editUser}
-          onClose={() => setEditUser(null)}
-          onSave={(body) => handleSaveEdit(editUser.id, body)}
-          loading={actionLoading === editUser.id}
-        />
-      )}
+      <EditUserModal
+        open={editUser != null}
+        user={editUser}
+        onClose={() => setEditUser(null)}
+        onSave={(body) => editUser && handleSaveEdit(editUser.id, body)}
+        loading={editUser != null && actionLoading === editUser.id}
+      />
 
-      {/* Permissions Modal */}
-      {permissionUser && (
-        <UpdatePermissionsModal
-          user={permissionUser}
-          permissions={availablePermissions}
-          selected={selectedPermissions}
-          setSelected={setSelectedPermissions}
-          rolePermissions={rolePermissions}
-          loading={permissionMetaLoading || actionLoading === permissionUser.id}
-          onClose={() => setPermissionUser(null)}
-          onSave={handleSavePermissions}
-        />
-      )}
+      <UpdatePermissionsModal
+        open={permissionUser != null}
+        user={permissionUser}
+        permissions={availablePermissions}
+        selected={selectedPermissions}
+        setSelected={setSelectedPermissions}
+        rolePermissions={rolePermissions}
+        loading={
+          permissionMetaLoading ||
+          (permissionUser != null && actionLoading === permissionUser.id)
+        }
+        onClose={() => setPermissionUser(null)}
+        onSave={handleSavePermissions}
+      />
 
       {/* Confirm Dialog */}
       {confirmDialog}
@@ -774,16 +789,29 @@ export function EmployeeManagementNew({ onOpenCreate, onActionSuccess, onActionE
 }
 
 // Detail Modal Component
-function DetailModal({ user, onClose }: { user: UserResponse; onClose: () => void }) {
+function DetailModal({
+  open,
+  user,
+  onClose,
+}: {
+  open: boolean;
+  user: UserResponse | null;
+  onClose: () => void;
+}) {
   const { language } = useLanguageStore();
   const t = translations[language];
   const isEn = language === "en";
-  const userPermissions = (user.permissions ?? []).filter((code) => Boolean(code));
+  const userPermissions = (user?.permissions ?? []).filter((code) => Boolean(code));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl dark:bg-zinc-950">
+    <AnimatedModal
+      open={open}
+      onClose={onClose}
+      backdropBlur
+      panelClassName="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl dark:bg-zinc-950"
+    >
+      {user ? (
+        <>
         <div className="relative overflow-hidden rounded-t-3xl bg-linear-to-br from-emerald-500 to-cyan-600 px-6 py-8">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
           <div className="relative flex items-center justify-between">
@@ -949,19 +977,22 @@ function DetailModal({ user, onClose }: { user: UserResponse; onClose: () => voi
             {t.close}
           </button>
         </div>
-      </div>
-    </div>
+        </>
+      ) : null}
+    </AnimatedModal>
   );
 }
 
 // Edit User Modal Component
 function EditUserModal({ 
+  open,
   user, 
   onClose, 
   onSave, 
   loading 
 }: { 
-  user: UserResponse; 
+  open: boolean;
+  user: UserResponse | null; 
   onClose: () => void; 
   onSave: (body: UpdateUserRequest) => void; 
   loading: boolean; 
@@ -970,20 +1001,22 @@ function EditUserModal({
   const t = translations[language];
   const isEn = language === "en";
   
-  const [fullName, setFullName] = useState(user.fullName ?? "");
-  const [departmentId, setDepartmentId] = useState<number | "">(user.departmentId ?? "");
-  const [roleId, setRoleId] = useState<number | "">(user.roleId ?? "");
+  const [fullName, setFullName] = useState(user?.fullName ?? "");
+  const [departmentId, setDepartmentId] = useState<number | "">(user?.departmentId ?? "");
+  const [roleId, setRoleId] = useState<number | "">(user?.roleId ?? "");
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [roles, setRoles] = useState<RoleResponse[]>([]);
   const [metaLoading, setMetaLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     setFullName(user.fullName ?? "");
     setDepartmentId(user.departmentId ?? "");
     setRoleId(user.roleId ?? "");
   }, [user]);
 
   useEffect(() => {
+    if (!user || !open) return;
     let cancelled = false;
     const loadData = async () => {
       setMetaLoading(true);
@@ -1013,7 +1046,7 @@ function EditUserModal({
     return () => {
       cancelled = true;
     };
-  }, [user.id]);
+  }, [user?.id, open]);
 
   const handleSubmit = () => {
     const body: UpdateUserRequest = {
@@ -1025,9 +1058,9 @@ function EditUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
+    <AnimatedModal open={open} onClose={onClose} backdropBlur>
+      {user ? (
+      <>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateUserInfo}</h3>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-300">
@@ -1102,14 +1135,16 @@ function EditUserModal({
             )}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+      ) : null}
+    </AnimatedModal>
   );
 }
 
 
 // Update Permissions Modal Component
 function UpdatePermissionsModal({
+  open,
   user,
   permissions,
   selected,
@@ -1119,7 +1154,8 @@ function UpdatePermissionsModal({
   onClose,
   onSave,
 }: {
-  user: UserResponse;
+  open: boolean;
+  user: UserResponse | null;
   permissions: { code: string; name?: string }[];
   selected: string[];
   setSelected: (next: string[]) => void;
@@ -1132,7 +1168,7 @@ function UpdatePermissionsModal({
   const t = translations[language];
   const isEn = language === "en";
 
-  const role = user.roleName;
+  const role = user?.roleName;
 
   const togglePermission = (code: string) => {
     // Don't allow toggling role permissions
@@ -1143,9 +1179,14 @@ function UpdatePermissionsModal({
   const isRolePermission = (code: string) => rolePermissions.includes(code);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
+    <AnimatedModal
+      open={open}
+      onClose={onClose}
+      backdropBlur
+      panelClassName="relative w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950"
+    >
+      {user ? (
+      <>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateUserPermissions}</h3>
@@ -1220,7 +1261,7 @@ function UpdatePermissionsModal({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="font-medium">
-                            {getPermissionLabel(p.code, p.name, isEn ? "en" : "vi")}
+                            {getPermissionLabel(p.code, p, isEn ? "en" : "vi")}
                           </div>
                           <div className="mt-0.5 text-[11px] uppercase tracking-wide opacity-70">{p.code}</div>
                         </div>
@@ -1273,7 +1314,8 @@ function UpdatePermissionsModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </>
+      ) : null}
+    </AnimatedModal>
   );
 }

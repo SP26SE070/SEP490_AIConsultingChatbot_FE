@@ -156,10 +156,6 @@ export default function StaffTransactionsPage() {
             <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
             <span className="text-sm text-zinc-500">{t.loadingList}</span>
           </div>
-        ) : filteredTransactions.length === 0 ? (
-          <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-            {t.noTransactions}
-          </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
             <div className="border-b border-zinc-200/80 bg-zinc-50/90 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -200,44 +196,52 @@ export default function StaffTransactionsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {filteredTransactions.map((tx) => (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-zinc-900 dark:text-zinc-50">{tx.tenantName}</div>
-                        {tx.description && (
-                          <div className="text-xs text-zinc-500">{tx.description}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-zinc-900 dark:text-zinc-50">
-                          {formatMoney(tx.amount)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tx.status)}`}
-                        >
-                          {getStatusLabel(tx.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
-                        {new Date(tx.createdAt).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openTransactionDetailModal(tx.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                          title={t.viewDetail}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </button>
+                  {filteredTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                        {t.noTransactions}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredTransactions.map((tx) => (
+                      <tr
+                        key={tx.id}
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-zinc-900 dark:text-zinc-50">{tx.tenantName}</div>
+                          {tx.description && (
+                            <div className="text-xs text-zinc-500">{tx.description}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-zinc-900 dark:text-zinc-50">
+                            {formatMoney(tx.amount)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(tx.status)}`}
+                          >
+                            {getStatusLabel(tx.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
+                          {new Date(tx.createdAt).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openTransactionDetailModal(tx.id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                            title={t.viewDetail}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

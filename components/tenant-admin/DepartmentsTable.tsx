@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, MoreVertical, Power } from "lucide-react";
+import { Pencil, MoreVertical, Power, Loader2, X, Building } from "lucide-react";
 import { ErrorNotice, useConfirmDialog } from "@/components/ui";
+import { toast } from "@/lib/notification-store";
 import {
   getTenantDepartments,
   getTenantActiveDepartments,
@@ -126,7 +127,7 @@ export function DepartmentsTable({
       setOpenMenuId(null);
       setMenuPos(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : t.error);
+      toast.error(e instanceof Error ? e.message : t.error);
     } finally {
       setActionLoadingId(null);
     }
@@ -301,6 +302,7 @@ function EditDepartmentModal({
   const [name, setName] = useState(dept.name ?? "");
   const [description, setDescription] = useState(dept.description ?? "");
   const [isActive, setIsActive] = useState(dept.isActive ?? true);
+  const { language } = useLanguageStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,56 +316,128 @@ function EditDepartmentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/60" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-xl dark:bg-zinc-950">
-        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{t.updateDepartment}</h3>
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.code}</label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.name}</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-zinc-500">{t.description}</label>
-            <input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-            />
-          </div>
-          <label className="flex items-center gap-2 pt-1 text-sm text-zinc-700 dark:text-zinc-200">
-            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="rounded text-green-500" />
-            {t.active}
-          </label>
-          <div className="mt-6 flex gap-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-xl bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-60"
-            >
-              {loading ? t.saving : t.save}
-            </button>
-            <button
-              type="button"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="absolute inset-0 bg-zinc-950/70" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-700/90 bg-zinc-950 shadow-2xl">
+        {/* Gradient header bar */}
+        <div className="shrink-0 h-1 bg-linear-to-r from-purple-500 via-pink-500 to-rose-500" />
+        
+        <div className="p-6">
+          {/* Header with close button */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-purple-500/20 to-pink-500/20 ring-1 ring-purple-500/30">
+                <Pencil className="h-6 w-6 text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">{t.updateDepartment}</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">{dept.name}</p>
+              </div>
+            </div>
+            <button 
+              type="button" 
               onClick={onClose}
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
             >
-              {t.cancel}
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Code field */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-400 mb-3">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                {t.code}
+              </label>
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={language === "en" ? "Enter department code" : "Nhập mã phòng ban"}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+            
+            {/* Name field */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-400 mb-3">
+                <Building className="h-3.5 w-3.5" />
+                {t.name}
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={language === "en" ? "Enter department name" : "Nhập tên phòng ban"}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+            
+            {/* Description field */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-400 mb-3">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                </svg>
+                {t.description}
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder={language === "en" ? "Enter department description" : "Nhập mô tả phòng ban"}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 resize-none"
+              />
+            </div>
+            
+            {/* Active status toggle */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Power className="h-4 w-4 text-purple-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">{language === "en" ? "Active Status" : "Trạng thái hoạt động"}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {language === "en" 
+                        ? "Control whether this department is active" 
+                        : "Kiểm soát trạng thái hoạt động của phòng ban"}
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex h-7 w-12 cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                  />
+                  <span className="absolute inset-0 rounded-full bg-zinc-700 transition peer-checked:bg-linear-to-r peer-checked:from-emerald-500 peer-checked:to-teal-500" />
+                  <span className="absolute left-0.5 h-6 w-6 rounded-full bg-white shadow-lg transition peer-checked:translate-x-5" />
+                </label>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-6 flex gap-3 pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:shadow-purple-500/40 hover:from-purple-600 hover:to-pink-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading ? t.saving : t.save}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:border-zinc-600"
+              >
+                {t.cancel}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

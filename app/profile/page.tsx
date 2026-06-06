@@ -17,8 +17,11 @@ import {
   Clock,
   User,
 } from "lucide-react";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { ProfilePageShell } from "@/components/layout/ProfilePageShell";
 import { AppLogo } from "@/components/brand/AppLogo";
+import { getPortalAccent, portalAccentStyles } from "@/lib/portal-accent";
+import { dashboardPanelClass } from "@/lib/dashboard-ui";
+import { cn } from "@/lib/utils/cn";
 import { getStoredUser } from "@/lib/auth-store";
 import { roleToPath } from "@/lib/auth-routes";
 import { useRouter } from "next/navigation";
@@ -51,6 +54,7 @@ import {
 } from "@/lib/date-of-birth";
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
+import { toast } from "@/lib/notification-store";
 
 function formatDateTime(iso: string | null, locale: string): string {
   if (!iso) return "—";
@@ -102,6 +106,8 @@ export default function ProfilePage() {
   const t = translations[language];
   const dateLocale = language === "vi" ? "vi-VN" : "en-US";
   const currentUser = getStoredUser();
+  const accent = getPortalAccent(currentUser?.roles);
+  const ac = portalAccentStyles[accent];
 
   const dobMessages: DobValidationMessages = useMemo(
     () => ({
@@ -283,7 +289,7 @@ export default function ProfilePage() {
       }
       const normalizedPhone = normalizeVietnamPhoneFromInput(phoneNumber);
       if (phoneNumber.trim() && !normalizedPhone) {
-        alert(
+        toast.warning(
           language === "en"
             ? "Phone number is invalid. Suggested format: +84 0123456789 or +84 123456789."
             : "Số điện thoại không hợp lệ. Gợi ý định dạng: +84 0123456789 hoặc +84 123456789."
@@ -461,8 +467,14 @@ export default function ProfilePage() {
     }
   };
 
-  const inputClass = "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/30";
-  const dobCompositeClass = "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100 dark:focus-within:border-emerald-400 dark:focus-within:ring-emerald-400/30";
+  const inputClass = cn(
+    "block w-full rounded-xl border border-zinc-200 bg-white/80 px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition focus:ring-2 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100",
+    ac.inputFocus
+  );
+  const dobCompositeClass = cn(
+    "flex w-full min-w-0 items-stretch rounded-xl border border-zinc-200 bg-white/80 text-sm text-zinc-900 shadow-sm outline-none transition focus-within:ring-2 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100",
+    ac.inputFocusWithin
+  );
   const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
   const logoDisplayUrl = logoPreviewUrl ?? tenantInfo?.logoUrl ?? profile?.tenantLogoUrl ?? null;
   const tenantNameDisplay = tenantInfo?.name ?? profile?.tenantName ?? "";
@@ -475,39 +487,35 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 to-emerald-50 dark:from-zinc-950 dark:to-zinc-900">
-        <AppHeader />
-        <main className="flex flex-1 items-center justify-center px-6 py-10">
+      <ProfilePageShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+            <div className={cn("h-10 w-10 animate-spin rounded-full border-2 border-t-transparent", ac.spinner)} />
             <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{t.profilePageLoading}</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </ProfilePageShell>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 to-emerald-50 dark:from-zinc-950 dark:to-zinc-900">
-        <AppHeader />
-        <main className="flex flex-1 items-center justify-center px-6 py-10">
+      <ProfilePageShell>
+        <div className="flex min-h-[50vh] items-center justify-center">
           <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-6 py-4 text-rose-800 shadow-lg dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200">
             {error ?? t.profilePageNotFound}
           </div>
-        </main>
-      </div>
+        </div>
+      </ProfilePageShell>
     );
   }
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-linear-to-br from-zinc-50 via-white to-emerald-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-emerald-950/20">
-      <AppHeader />
-      <main className="min-w-0 overflow-auto">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <ProfilePageShell>
+      <>
           {/* Compact Profile Header */}
-          <div className="mb-6 flex items-center gap-4 rounded-2xl border border-zinc-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm dark:border-zinc-700 dark:bg-zinc-800/80">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 shadow-md">
+          <div className={cn("mb-6 flex items-center gap-4 p-4 sm:p-5", dashboardPanelClass)}>
+            <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl shadow-md", ac.avatarGradient)}>
               <UserCircle className="h-7 w-7 text-white" />
             </div>
             <div className="min-w-0 flex-1">
@@ -519,7 +527,7 @@ export default function ProfilePage() {
               </p>
             </div>
             {profile.roleName && (
-              <span className="hidden shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 sm:flex">
+              <span className={cn("hidden shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-medium sm:flex", ac.badge)}>
                 <ShieldCheck className="h-3 w-3" />
                 {profile.roleName}
               </span>
@@ -528,16 +536,17 @@ export default function ProfilePage() {
 
           {/* Tabs */}
           <div className="mb-6 overflow-x-auto">
-            <div className="flex gap-1 rounded-xl bg-white/80 p-1 shadow-sm backdrop-blur-sm dark:bg-zinc-800/80">
+            <div className={cn("flex gap-1 rounded-xl border border-zinc-200/80 bg-white/75 p-1 shadow-sm backdrop-blur-sm dark:border-zinc-800/80 dark:bg-zinc-900/75")}>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap ${
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all whitespace-nowrap",
                     activeTab === tab.id
-                      ? "bg-emerald-500 text-white shadow-sm"
+                      ? cn(ac.tabActive, "text-white shadow-sm")
                       : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-700"
-                  }`}
+                  )}
                 >
                   <tab.icon className="h-4 w-4" />
                   <span className="hidden xs:inline">{tab.label}</span>
@@ -547,7 +556,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Tab Content */}
-          <div className="rounded-2xl bg-white p-6 shadow-lg dark:bg-zinc-900/80">
+          <div className={cn("rounded-2xl p-6 sm:p-8", dashboardPanelClass)}>
             <div key={activeTab} className="animate-tab-enter">
             {/* Info Tab */}
             {activeTab === "info" && (
@@ -555,7 +564,7 @@ export default function ProfilePage() {
                 {/* Personal Info Card */}
                 <section className="h-full rounded-xl border border-zinc-200 bg-zinc-50/50 p-5 dark:border-zinc-700 dark:bg-zinc-800/50 flex flex-col">
                   <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
+                    <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", ac.iconBg)}>
                       <User className="h-4 w-4" />
                     </span>
                     {t.profilePersonalInformation}
@@ -575,7 +584,7 @@ export default function ProfilePage() {
                         { icon: Clock, label: t.profileLastLogin, value: formatDateTime(profile.lastLoginAt, dateLocale) },
                       ].map(({ icon: Icon, label, value }) => (
                         <div key={label} className="flex gap-3">
-                          <Icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                          <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", ac.icon)} />
                           <div>
                             <dt className="text-zinc-500 dark:text-zinc-400">{label}</dt>
                             <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
@@ -588,9 +597,9 @@ export default function ProfilePage() {
 
                 <div className="flex h-full flex-col gap-6">
                   {/* Update Form Card */}
-                  <section className="flex-1 rounded-xl border border-violet-200 bg-violet-50/30 p-5 dark:border-violet-800 dark:bg-violet-950/20">
+                  <section className={cn("flex-1 rounded-xl border p-5", ac.formCard)}>
                     <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:bg-violet-400/20 dark:text-violet-400">
+                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", ac.formIconBg)}>
                         <Pencil className="h-4 w-4" />
                       </span>
                       {t.profileUpdateProfile}
@@ -602,7 +611,7 @@ export default function ProfilePage() {
                         <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{updateError}</p>
                       )}
                       {updateSuccess && (
-                        <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profileUpdatedSuccessfully}</p>
+                        <p className={cn("rounded-xl p-2.5 text-sm", ac.successMsg)}>{t.profileUpdatedSuccessfully}</p>
                       )}
 
                       <div>
@@ -655,7 +664,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={openDobPicker}
-                            className="flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 text-emerald-600 transition hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/15"
+                            className={cn("flex shrink-0 items-center justify-center rounded-r-xl px-2.5 py-2.5 transition hover:opacity-80", ac.icon)}
                             title={t.profileDobPickFromCalendar}
                             aria-label={t.profileDobOpenCalendar}
                           >
@@ -677,7 +686,7 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={updateLoading}
-                        className="w-full rounded-xl bg-linear-to-r from-violet-500 to-purple-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-600 hover:to-purple-600 disabled:opacity-60"
+                        className={cn("w-full rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-lg transition disabled:opacity-60", ac.btnGradient)}
                       >
                         {updateLoading ? t.profileSaving : t.profileSaveChanges}
                       </button>
@@ -685,9 +694,9 @@ export default function ProfilePage() {
                   </section>
 
                   {/* Contact Email Card */}
-                  <section className="flex-1 rounded-xl border border-cyan-200 bg-cyan-50/30 p-5 dark:border-cyan-800 dark:bg-cyan-950/20">
+                  <section className={cn("flex-1 rounded-xl border p-5", ac.emailFormCard)}>
                     <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-600 dark:bg-cyan-400/20 dark:text-cyan-400">
+                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", ac.formIconBg)}>
                         <Mail className="h-4 w-4" />
                       </span>
                       {t.profileUpdateContactEmail}
@@ -699,7 +708,7 @@ export default function ProfilePage() {
                         <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{contactError}</p>
                       )}
                       {contactSuccess && (
-                        <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{contactSuccess}</p>
+                        <p className={cn("rounded-xl p-2.5 text-sm", ac.successMsg)}>{contactSuccess}</p>
                       )}
 
                       <div>
@@ -724,7 +733,7 @@ export default function ProfilePage() {
                             inputMode="numeric"
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
-                            className="w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100"
+                            className={cn("w-full rounded-xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-lg tracking-widest text-zinc-900 shadow-sm outline-none transition focus:ring-2 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-zinc-100", ac.otpFocus)}
                             placeholder="123456"
                             maxLength={6}
                             required
@@ -735,7 +744,7 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={contactLoading}
-                        className="w-full rounded-xl bg-linear-to-r from-cyan-500 to-sky-500 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-600 hover:to-sky-600 disabled:opacity-60"
+                        className={cn("w-full rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-lg transition disabled:opacity-60", ac.emailBtnGradient)}
                       >
                         {contactLoading ? t.profileProcessing : otpSent ? t.profileVerifyOtpUpdate : t.profileSendOtp}
                       </button>
@@ -773,7 +782,7 @@ export default function ProfilePage() {
                     <p className="rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{passwordError}</p>
                   )}
                   {passwordSuccess && (
-                    <p className="rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{t.profilePasswordUpdatedSuccess}</p>
+                    <p className={cn("rounded-xl p-2.5 text-sm", ac.successMsg)}>{t.profilePasswordUpdatedSuccess}</p>
                   )}
 
                   {!mustChangePassword && (
@@ -877,7 +886,7 @@ export default function ProfilePage() {
                       <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{tenantInfoError}</p>
                     )}
                     {tenantInfoSuccess && (
-                      <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{tenantInfoSuccess}</p>
+                      <p className={cn("mb-3 rounded-xl p-2.5 text-sm", ac.successMsg)}>{tenantInfoSuccess}</p>
                     )}
 
                     <form onSubmit={handleTenantInfoUpdate} className="space-y-4">
@@ -959,7 +968,7 @@ export default function ProfilePage() {
                       <p className="mb-3 rounded-xl bg-rose-50 p-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{logoError}</p>
                     )}
                     {logoSuccess && (
-                      <p className="mb-3 rounded-xl bg-emerald-50 p-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">{logoSuccess}</p>
+                      <p className={cn("mb-3 rounded-xl p-2.5 text-sm", ac.successMsg)}>{logoSuccess}</p>
                     )}
 
                     <div className="flex flex-wrap items-center gap-4">
@@ -996,8 +1005,6 @@ export default function ProfilePage() {
             )}
             </div>
           </div>
-        </div>
-      </main>
 
       {/* First Password Done Prompt Modal */}
       {showFirstPasswordDonePrompt && (
@@ -1036,7 +1043,7 @@ export default function ProfilePage() {
                   router.push(destination);
                   router.refresh();
                 }}
-                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className={cn("rounded-lg px-3 py-2 text-sm font-medium text-white", ac.btnPrimary)}
               >
                 {isTenantAdmin
                   ? language === "en"
@@ -1054,6 +1061,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </div>
+      </>
+    </ProfilePageShell>
   );
 }

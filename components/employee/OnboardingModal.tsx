@@ -8,6 +8,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useLanguageStore } from "@/lib/language-store";
+import { getPermissionLabel } from "@/lib/permission-labels";
 import {
   getMyOnboardingModuleAttachment,
   type OnboardingAttachmentContent,
@@ -514,7 +515,7 @@ export function OnboardingModal({
                           key={permission}
                           className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300"
                         >
-                          {permission}
+                          {getPermissionLabel(permission, undefined, isEn ? "en" : "vi")}
                         </span>
                       ))}
                     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EmployeeManagementNew } from "@/components/tenant-admin/EmployeeManagementNew";
 import { CreateUserModal } from "@/components/tenant-admin/CreateUserModal";
+import { ImportEmployeesModal } from "@/components/tenant-admin/ImportEmployeesModal";
 import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { useLanguageStore } from "@/lib/language-store";
 
@@ -15,6 +16,7 @@ export default function EmployeesPage() {
   const { language } = useLanguageStore();
   const isEn = language === "en";
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
 
@@ -58,6 +60,10 @@ export default function EmployeesPage() {
             setFeedback(null);
             setCreateOpen(true);
           }}
+          onOpenImport={() => {
+            setFeedback(null);
+            setImportOpen(true);
+          }}
           onActionSuccess={(message) => {
             setFeedback({ tone: "success", message });
             setRefreshKey((k) => k + 1);
@@ -71,23 +77,24 @@ export default function EmployeesPage() {
         <CreateUserModal
           open={createOpen}
           onClose={() => setCreateOpen(false)}
-          onSuccess={(emailSent) => {
+          onSuccess={() => {
             setRefreshKey((k) => k + 1);
-            if (emailSent === false) {
-              setFeedback({
-                tone: "warning",
-                message: isEn
-                  ? "User created successfully, but the welcome email could not be sent. Please share login credentials manually."
-                  : "Tạo người dùng thành công, nhưng không thể gửi email chào mừng. Vui lòng chia sẻ thông tin đăng nhập thủ công.",
-              });
-              return;
-            }
             setFeedback({
               tone: "success",
               message: isEn
-                ? "User created successfully. Welcome email has been sent."
-                : "Tạo người dùng thành công. Email chào mừng đã được gửi.",
+                ? "User created successfully. Welcome email is being sent."
+                : "Tạo người dùng thành công. Email chào mừng đang được gửi.",
             });
+          }}
+        />
+
+        <ImportEmployeesModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onSuccess={(message) => {
+            setRefreshKey((k) => k + 1);
+            setFeedback({ tone: "success", message });
+            setImportOpen(false);
           }}
         />
       </div>

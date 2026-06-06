@@ -19,6 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useConfirmDialog } from "@/components/ui";
+import { toast } from "@/lib/notification-store";
 import { 
   listTagsManage, 
   deleteTag, 
@@ -496,7 +497,7 @@ export default function TagsPage() {
       await deleteTag(id);
       await loadTags();
     } catch (e) {
-      alert(isEn ? "Failed to delete tag" : "Xóa tag thất bại");
+      toast.error(isEn ? "Failed to delete tag" : "Xóa tag thất bại");
       console.error(e);
     } finally {
       setDeletingId(null);
@@ -536,7 +537,7 @@ export default function TagsPage() {
       }
       await loadTags();
     } catch (e) {
-      alert(isEn ? "Failed to update status" : "Cập nhật trạng thái thất bại");
+      toast.error(isEn ? "Failed to update status" : "Cập nhật trạng thái thất bại");
       console.error(e);
     }
   };

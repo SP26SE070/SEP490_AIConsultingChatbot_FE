@@ -28,6 +28,8 @@ import {
   formatUptimeSeconds,
 } from "@/components/super-admin/dashboard-chart-utils";
 import { ErrorNotice } from "@/components/ui";
+import { dashboardPanelClass } from "@/lib/dashboard-ui";
+import { cn } from "@/lib/utils/cn";
 
 export default function StaffDashboardPage() {
   const { language } = useLanguageStore();
@@ -181,18 +183,18 @@ export default function StaffDashboardPage() {
         : (parsed?.system.statusLabel || parsed?.systemStatusLabelRaw || "").trim() || t.unknown;
 
   return (
-      <div className="space-y-8">
-        <div>
+      <div className="dashboard-page-shell space-y-10">
+        <div className="pt-1">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-            {language === "en" ? "Staff Dashboard" : "Bảng điều khiển Staff"}
+            {t.staffDashboard}
           </h1>
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-            {language === "en" ? "Monitor organizations and usage as staff" : "Theo dõi tổ chức và mức sử dụng với vai trò staff"}
+            {t.staffDescription}
           </p>
         </div>
 
         {statsLoading ? (
-          <div className="flex items-center justify-center gap-2 rounded-3xl bg-white p-8 dark:bg-zinc-950">
+          <div className={cn("flex items-center justify-center gap-2", dashboardPanelClass)}>
             <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
             <span className="text-sm text-zinc-500">{t.loading}…</span>
           </div>
@@ -200,12 +202,12 @@ export default function StaffDashboardPage() {
           <ErrorNotice message={error || t.noData} />
         ) : (
           <>
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="rounded-3xl bg-white p-8 shadow-lg shadow-green-100/60 ring-1 ring-zinc-200/80 dark:bg-zinc-950 dark:ring-zinc-800 dark:shadow-black/40">
+            <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-6 lg:gap-8">
+              <div className={dashboardPanelClass}>
                 <div className="mb-8">
                   <div className="mb-2 flex items-center gap-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-                      <PieChart className="h-5 w-5" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 ring-1 ring-emerald-500/20">
+                      <PieChart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{language === "en" ? "Tenant overview" : "Tổ chức — tổng quan"}</h3>
                   </div>
@@ -243,12 +245,12 @@ export default function StaffDashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-gradient-to-br from-blue-100 to-indigo-100 p-6 shadow-lg shadow-blue-100/60 dark:from-zinc-950 dark:to-zinc-900 dark:shadow-black/40 sm:p-8">
+              <div className={dashboardPanelClass}>
                 <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500/20">
-                        <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 ring-1 ring-emerald-500/20">
+                        <CreditCard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
                         {language === "en" ? "Subscriptions by plan" : "Đăng ký theo gói"}
@@ -258,18 +260,18 @@ export default function StaffDashboardPage() {
                       {language === "en" ? "Tenant subscriptions grouped by subscription plan" : "Số subscription của tenant theo từng gói"}
                     </p>
                   </div>
-                  <Link href="/staff/subscriptions" className="text-sm font-medium text-blue-600 underline-offset-4 hover:underline dark:text-blue-400">
+                  <Link href="/staff/subscriptions" className="text-sm font-medium text-emerald-600 underline-offset-4 hover:underline dark:text-emerald-400">
                     {language === "en" ? "Open full list →" : "Xem danh sách đầy đủ →"}
                   </Link>
                 </div>
-                <div className="rounded-2xl border border-zinc-300/90 bg-white/95 p-4 dark:border-zinc-800 dark:bg-zinc-950/60 sm:p-5">
+                <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-4 dark:border-zinc-800/80 dark:bg-zinc-900/50 sm:p-5">
                   <div className="mb-4 flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                     <span>{language === "en" ? "Active subscriptions" : "Subscription đang hoạt động"}</span>
                   </div>
                   {subsLoading ? (
                     <div className="py-12 text-center text-zinc-500">
-                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-500" />
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-500" />
                     </div>
                   ) : (
                     <div className="grid grid-cols-4 items-end gap-2 pt-4 sm:gap-4">
@@ -306,7 +308,7 @@ export default function StaffDashboardPage() {
                     </p>
                   </div>
                 )}
-                <div className="mt-3 rounded-2xl bg-white/95 p-4 text-center ring-1 ring-blue-200/70 dark:bg-zinc-800/40 dark:ring-0">
+                <div className="mt-3 rounded-2xl bg-zinc-100/95 p-4 text-center ring-1 ring-zinc-200/80 dark:bg-zinc-900 dark:ring-0">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                     {language === "en" ? "subscriptions.total (dashboard)" : "subscriptions.total (dashboard)"}
                   </p>
@@ -317,12 +319,12 @@ export default function StaffDashboardPage() {
               </div>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="rounded-3xl bg-gradient-to-br from-green-100 to-emerald-100 p-8 shadow-lg shadow-green-100/60 dark:from-zinc-950 dark:to-zinc-900 dark:shadow-black/40">
+            <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-4">
+              <div className={dashboardPanelClass}>
                 <div className="mb-8 flex items-start justify-between">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-500/20">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/15 ring-1 ring-emerald-500/20">
                         <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
                       </div>
                       <h3 className="text-xl font-bold text-zinc-900 dark:text-white">{language === "en" ? "LLM usage" : "Sử dụng LLM"}</h3>
@@ -347,7 +349,7 @@ export default function StaffDashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-white p-8 shadow-lg shadow-green-100/60 ring-1 ring-zinc-200/80 dark:bg-zinc-950 dark:ring-zinc-800 dark:shadow-black/40">
+              <div className={dashboardPanelClass}>
                 <div className="mb-8">
                   <div className="mb-2 flex items-center gap-2">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-500/20">
@@ -390,8 +392,8 @@ export default function StaffDashboardPage() {
               </div>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
-              <div className="rounded-3xl bg-white p-6 shadow-lg shadow-green-100/60 dark:bg-zinc-950 dark:shadow-black/40">
+            <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-4">
+              <div className={dashboardPanelClass}>
                 <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{language === "en" ? "System health" : "Sức khỏe hệ thống"}</h3>
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{language === "en" ? "From analytics `system` object" : "Từ object `system` trong analytics"}</p>
                 <div className="mt-6 space-y-3">

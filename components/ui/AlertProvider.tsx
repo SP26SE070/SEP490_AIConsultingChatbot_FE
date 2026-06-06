@@ -1,20 +1,52 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  LucideIcon,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ToastContainer } from "@/components/ui/Toast";
 import { parseApiErrorMessage } from "@/lib/api/parseApiError";
 import { useLanguageStore } from "@/lib/language-store";
+import { useNotificationStore } from "@/lib/notification-store";
 
-type AlertTone = "error" | "success" | "info";
+type NotificationType = "error" | "success" | "info";
 
-type AlertState = {
+type NotificationState = {
   id: number;
   message: string;
-  tone: AlertTone;
+  type: NotificationType;
 };
 
-function detectTone(message: string): AlertTone {
+type ToastConfig = {
+  icon: LucideIcon;
+  iconBg: string;
+  iconColor: string;
+};
+
+const toastConfigs: Record<NotificationType, ToastConfig> = {
+  error: {
+    icon: AlertCircle,
+    iconBg: "bg-red-100 dark:bg-red-900/50",
+    iconColor: "text-red-500",
+  },
+  success: {
+    icon: CheckCircle2,
+    iconBg: "bg-emerald-100 dark:bg-emerald-900/50",
+    iconColor: "text-emerald-500",
+  },
+  info: {
+    icon: Info,
+    iconBg: "bg-sky-100 dark:bg-sky-900/50",
+    iconColor: "text-sky-500",
+  },
+};
+
+function detectTone(message: string): NotificationType {
   const text = message.toLowerCase();
   if (
     text.includes("thành công") ||
@@ -35,32 +67,11 @@ function detectTone(message: string): AlertTone {
   return "info";
 }
 
-const toneStyles: Record<
-  AlertTone,
-  { ring: string; icon: React.ReactNode; title: string }
-> = {
-  error: {
-    ring: "ring-red-500/40",
-    icon: <AlertCircle className="h-5 w-5 text-red-400" />,
-    title: "Có lỗi xảy ra",
-  },
-  success: {
-    ring: "ring-emerald-500/40",
-    icon: <CheckCircle2 className="h-5 w-5 text-emerald-400" />,
-    title: "Thành công",
-  },
-  info: {
-    ring: "ring-sky-500/40",
-    icon: <Info className="h-5 w-5 text-sky-400" />,
-    title: "Thông báo",
-  },
-};
-
 export function AlertProvider({ children }: { children: React.ReactNode }) {
-  const [alertState, setAlertState] = useState<AlertState | null>(null);
+  const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
   const { language } = useLanguageStore();
 
-  const toneTitle = useMemo(() => {
+  const titles = useMemo(() => {
     const isEn = language === "en";
     return {
       error: isEn ? "Error" : "Có lỗi xảy ra",
@@ -71,6 +82,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     };
   }, [language]);
 
+  // Intercept window.alert to show toast instead
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -82,10 +94,20 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       const normalizedMessage =
         typeof message === "string" ? message : String(message ?? "");
       const parsedMessage = parseApiErrorMessage(normalizedMessage);
-      setAlertState({
+      const type = detectTone(parsedMessage);
+
+      // Show as toast notification using notification store
+      const { addNotification } = useNotificationStore.getState();
+      addNotification({
+        message: parsedMessage,
+        type: type === "success" ? "success" : type === "error" ? "error" : "info",
+      });
+
+      // Also set notification state for modal style if needed
+      setNotificationState({
         id: Date.now(),
         message: parsedMessage,
-        tone: detectTone(parsedMessage),
+        type,
       });
     };
 
@@ -94,40 +116,52 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Auto dismiss notification modal after timeout
   useEffect(() => {
-    if (!alertState) {
+    if (!notificationState) {
       return;
     }
     const timeout = window.setTimeout(() => {
-      setAlertState((current) =>
-        current?.id === alertState.id ? null : current
+      setNotificationState((current) =>
+        current?.id === notificationState.id ? null : current
       );
     }, 5500);
     return () => window.clearTimeout(timeout);
-  }, [alertState]);
+  }, [notificationState]);
 
-  const toneMeta = useMemo(
-    () => (alertState ? toneStyles[alertState.tone] : null),
-    [alertState]
+  const config = useMemo(
+    () => (notificationState ? toastConfigs[notificationState.type] : null),
+    [notificationState]
   );
+
+  const handleClose = useCallback(() => {
+    setNotificationState(null);
+  }, []);
 
   return (
     <>
       {children}
+      <ToastContainer />
 
       <AnimatePresence>
-        {alertState && toneMeta && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        {notificationState && config && (
+          <div className="fixed inset-0 z-[99998] flex items-center justify-center p-4">
             <motion.div
               className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setAlertState(null)}
+              onClick={handleClose}
             />
 
             <motion.div
-              className={`relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 text-zinc-900 shadow-2xl ring-1 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white ${toneMeta.ring}`}
+              className={`relative w-full max-w-md overflow-hidden rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 ${
+                notificationState.type === "error"
+                  ? "ring-1 ring-red-500/40"
+                  : notificationState.type === "success"
+                    ? "ring-1 ring-emerald-500/40"
+                    : "ring-1 ring-sky-500/40"
+              }`}
               initial={{ opacity: 0, y: 18, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 14, scale: 0.98 }}
@@ -136,34 +170,42 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 className="absolute right-3 top-3 rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
-                onClick={() => setAlertState(null)}
-                aria-label={toneTitle.close}
+                onClick={handleClose}
+                aria-label={titles.close}
               >
                 <X className="h-4 w-4" />
               </button>
 
               <div className="mb-3 flex items-center gap-2">
-                {toneMeta.icon}
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${config.iconBg}`}>
+                  <config.icon className={`h-5 w-5 ${config.iconColor}`} />
+                </div>
                 <p className="text-sm font-semibold tracking-wide">
-                  {alertState.tone === "error"
-                    ? toneTitle.error
-                    : alertState.tone === "success"
-                      ? toneTitle.success
-                      : toneTitle.info}
+                  {notificationState.type === "error"
+                    ? titles.error
+                    : notificationState.type === "success"
+                      ? titles.success
+                      : titles.info}
                 </p>
               </div>
 
               <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-100">
-                {alertState.message}
+                {notificationState.message}
               </p>
 
               <div className="mt-5 flex justify-end">
                 <button
                   type="button"
-                  className="rounded-full border border-emerald-300/70 bg-emerald-500/10 px-6 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-100 dark:hover:bg-emerald-400/25"
-                  onClick={() => setAlertState(null)}
+                  className={`rounded-full border px-6 py-2 text-sm font-semibold transition ${
+                    notificationState.type === "error"
+                      ? "border-red-300/70 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-100 dark:hover:bg-red-400/25"
+                      : notificationState.type === "success"
+                        ? "border-emerald-300/70 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-100 dark:hover:bg-emerald-400/25"
+                        : "border-sky-300/70 bg-sky-500/10 text-sky-700 hover:bg-sky-500/20 dark:text-sky-100 dark:hover:bg-sky-400/25"
+                  }`}
+                  onClick={handleClose}
                 >
-                  {toneTitle.ok}
+                  {titles.ok}
                 </button>
               </div>
             </motion.div>

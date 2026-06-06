@@ -17,8 +17,8 @@ export default function SuperAdminDashboard() {
 
   return (
     <SuperAdminDashboardAnalyticsProvider>
-      <div className="space-y-8">
-        <div>
+      <div className="dashboard-page-shell space-y-10">
+        <div className="pt-1">
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
             {isEn ? "Platform Dashboard" : "Bảng điều khiển nền tảng"}
           </h1>
@@ -34,11 +34,11 @@ export default function SuperAdminDashboard() {
         <AdminRevenueChart />
 
         {/* LLM + Subscription (tách khỏi tài liệu / chunk) */}
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="mt-2 grid gap-8 lg:grid-cols-2 lg:mt-4">
           <AIQueriesChart />
           <PlatformSubscriptionsChart />
         </div>
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-4">
           <KnowledgeVolumeChart />
 
           {/* Một card tenant (status + tỷ lệ cùng layout) */}
@@ -53,7 +53,7 @@ export default function SuperAdminDashboard() {
           />
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="mt-2 grid gap-6 lg:grid-cols-2 lg:mt-4">
           <SystemHealth />
           <RecentActivity />
         </div>

@@ -23,6 +23,7 @@ import {
   type DocumentPreviewResponse,
   type ListDocumentsParams,
 } from "@/lib/api/documents";
+import { documentUploadAccessHint } from "@/lib/role-levels";
 import type {
   DocumentResponse,
   DeletedDocumentResponse,
@@ -429,6 +430,86 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     void load();
   }, [load]);
 
+  // Create stable tracking key for in-progress documents
+  const inProgressTrackingKey = useMemo(() => {
+    return documents
+      .filter((doc) => {
+        const state = getEmbeddingState(doc.embeddingStatus);
+        return state === "in-progress";
+      })
+      .map((doc) => doc.id)
+      .sort()
+      .join(",");
+  }, [documents]);
+
+  // Lightweight polling: only update status of in-progress documents
+  useEffect(() => {
+    // If no documents are in progress, don't poll
+    if (!inProgressTrackingKey) return;
+
+    const inProgressDocIds = inProgressTrackingKey.split(",").filter(Boolean);
+
+    // Poll every 5 seconds (less disruptive)
+    const interval = setInterval(async () => {
+      try {
+        // Fetch all in-progress documents in parallel with proper error handling
+        const promises = inProgressDocIds.map(async (docId) => {
+          try {
+            return await getDocument(docId);
+          } catch (err) {
+            // Silently ignore documents that can't be fetched (deleted, permission changed, etc.)
+            return null;
+          }
+        });
+
+        const results = await Promise.all(promises);
+
+        // Batch update all documents at once
+        const updates: Record<string, string> = {};
+        const completedTimestamps: Record<string, string> = {};
+
+        results.forEach((updatedDoc) => {
+          if (!updatedDoc) return;
+
+          updates[updatedDoc.id] = updatedDoc.embeddingStatus || "UNKNOWN";
+
+          // Track completion timestamps
+          const newState = getEmbeddingState(updatedDoc.embeddingStatus);
+          if (newState === "completed") {
+            const serverTimestamp = extractCompletionTimestamp(updatedDoc);
+            if (serverTimestamp) {
+              completedTimestamps[updatedDoc.id] = serverTimestamp;
+            }
+            previousEmbeddingStateRef.current[updatedDoc.id] = "completed";
+          }
+        });
+
+        // Single state update to minimize re-renders
+        if (Object.keys(updates).length > 0) {
+          setDocuments((prevDocs) =>
+            prevDocs.map((doc) =>
+              updates[doc.id]
+                ? { ...doc, embeddingStatus: updates[doc.id] }
+                : doc
+            )
+          );
+        }
+
+        if (Object.keys(completedTimestamps).length > 0) {
+          setEmbeddingCompletedAtByDocId((prev) => ({
+            ...prev,
+            ...completedTimestamps,
+          }));
+        }
+      } catch (e) {
+        // Silently fail - don't disrupt user experience
+        console.error("Failed to poll document status:", e);
+      }
+    }, 5000); // 5 seconds
+
+    return () => clearInterval(interval);
+  }, [inProgressTrackingKey]);
+
   const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -544,6 +625,33 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
 
     return () => window.clearInterval(tick);
   }, [embeddingModalOpen, embeddingTrackStatus, embeddingProgress]);
+
+  // Poll embedding status for the tracked document when modal is open
+  useEffect(() => {
+    if (!embeddingModalOpen || !embeddingTrackDocId) return;
+    
+    const state = getEmbeddingState(embeddingTrackStatus);
+    if (state === "completed" || state === "failed") return;
+
+    // Poll every 2 seconds when modal is open
+    const interval = setInterval(async () => {
+      try {
+        const doc = await getDocument(embeddingTrackDocId);
+        setEmbeddingTrackStatus(doc.embeddingStatus || "PENDING");
+        
+        // If completed or failed, stop polling and refresh the main list
+        const newState = getEmbeddingState(doc.embeddingStatus);
+        if (newState === "completed" || newState === "failed") {
+          await load();
+        }
+      } catch (e) {
+        // Silently fail - modal will continue with existing status
+        console.error("Failed to poll embedding status:", e);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [embeddingModalOpen, embeddingTrackDocId, embeddingTrackStatus, load]);
 
   const handleUpdateAccess = async (id: string, body: UpdateDocumentAccessRequest) => {
     setError(null);
@@ -762,6 +870,9 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
         <h3 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">
           {t.uploadDocument}
         </h3>
+        <p className="mb-4 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+          {documentUploadAccessHint(isEn ? "en" : "vi")}
+        </p>
         <form onSubmit={handleUpload} className="flex flex-col gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">

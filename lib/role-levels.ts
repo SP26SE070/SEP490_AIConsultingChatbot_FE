@@ -37,6 +37,14 @@ export const ROLE_LEVEL_OPTIONS: RoleLevelOption[] = [
     },
   },
   {
+    value: 4,
+    shortLabel: { vi: "Nhân viên", en: "Employee" },
+    dropdownLabel: {
+      vi: "Level 4 — Nhân viên",
+      en: "Level 4 — Employee",
+    },
+  },
+  {
     value: 5,
     shortLabel: { vi: "Intern", en: "Intern" },
     dropdownLabel: {
@@ -87,6 +95,13 @@ export function minimumRoleLevelTooltip(lang: RoleLevelLang): string {
 }
 
 /** Lấy mức lớn nhất (1–5) trong các role đã chọn; mặc định 4 nếu không có level. */
+/** Gợi ý quyền xem sau khi upload (theo level người upload). */
+export function documentUploadAccessHint(lang: RoleLevelLang): string {
+  return lang === "en"
+    ? "Access is set automatically: levels 1–2 see all departments; levels 3–5 only their department (level 3 also sees level 4–5 docs in the same dept)."
+    : "Quyền xem tự động theo cấp bậc: level 1–2 xem mọi phòng ban; level 3–5 chỉ phòng ban của bạn (level 3 còn xem tài liệu level 4–5 cùng phòng ban).";
+}
+
 export function deriveMinimumRoleLevelFromSelectedRoles(
   selectedRoleIds: number[],
   allRoles: { id: number; level?: number | null }[]

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -45,6 +45,7 @@ type SuperAdminSidebarProps = {
 
 export function SuperAdminSidebar({ open, setOpen }: SuperAdminSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { language } = useLanguageStore();
   const t = translations[language];
   const [statusData, setStatusData] = useState<SidebarSystemStatus>(DEFAULT_STATUS);
@@ -147,91 +148,102 @@ export function SuperAdminSidebar({ open, setOpen }: SuperAdminSidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-6 left-4 z-50 w-64 shrink-0 rounded-3xl bg-white p-6 shadow-lg shadow-green-100/60 transition-transform duration-300 dark:bg-zinc-950 dark:shadow-black/50 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-80 flex h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-zinc-200/90 bg-white shadow-xl shadow-zinc-200/40 transition-transform duration-300 dark:border-zinc-800/90 dark:bg-zinc-950 dark:shadow-none lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex h-full flex-col justify-between gap-6">
-          <div className="space-y-6">
-            {/* Logo */}
-            <div className="flex items-center justify-between">
-              <Link href="/super-admin" className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-zinc-900 dark:text-white">
-                  {t.superAdmin}
-                </span>
-              </Link>
+        <div className="flex min-h-0 flex-1 flex-col p-6">
+          <div className="shrink-0 space-y-4">
+            <div className="flex items-start justify-end">
               <button
+                type="button"
                 onClick={() => setOpen(false)}
-                className="lg:hidden"
+                className="mt-1 lg:hidden"
               >
                 <X className="h-5 w-5 text-zinc-500" />
               </button>
             </div>
 
-            {/* Navigation */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <div className="px-0.5 py-1">
+              <p className="text-sm font-bold uppercase tracking-[0.14em] text-zinc-600 dark:text-zinc-300">
                 {t.platformMenu}
               </p>
             </div>
+          </div>
 
-            <nav className="space-y-1 text-sm">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "relative flex w-full items-center justify-between overflow-hidden rounded-2xl px-3.5 py-3 font-medium transition",
-                      isActive
-                        ? "text-white shadow-sm shadow-green-400/60"
-                        : "text-zinc-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
-                    )}
-                  >
-                    {isActive ? (
-                      <motion.span
-                        layoutId="super-admin-sidebar-active-pill"
-                        className="absolute inset-0 rounded-2xl bg-green-500"
-                        transition={{ type: "spring", stiffness: 280, damping: 30, mass: 0.9 }}
-                      />
-                    ) : null}
-                    <span className="relative z-10 flex items-center gap-3">
-                      <span className={cn(
+          <nav className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-2 text-sm [scrollbar-gutter:stable]">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  onMouseEnter={() => router.prefetch(item.href)}
+                  onFocus={() => router.prefetch(item.href)}
+                  className={cn(
+                    "relative flex w-full items-center justify-between overflow-hidden rounded-2xl px-3.5 py-3 font-medium transition",
+                    isActive
+                      ? "text-white shadow-sm shadow-purple-400/60"
+                      : "text-zinc-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-300"
+                  )}
+                >
+                  {isActive ? (
+                    <motion.span
+                      layoutId="super-admin-sidebar-active-pill"
+                      className="absolute inset-0 rounded-2xl bg-purple-500"
+                      transition={{ type: "spring", stiffness: 280, damping: 30, mass: 0.9 }}
+                    />
+                  ) : null}
+                  <span className="relative z-10 flex items-center gap-3">
+                    <span
+                      className={cn(
                         "flex h-9 w-9 items-center justify-center rounded-2xl text-sm",
                         isActive ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-900"
-                      )}>
-                        <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-zinc-500")} />
-                      </span>
-                      {item.name}
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          "h-4 w-4",
+                          isActive ? "text-white" : "text-zinc-500"
+                        )}
+                      />
                     </span>
-                    {isActive && <span className="relative z-10 h-8 w-1.5 rounded-full bg-white/70" />}
-                  </Link>
-                );
-              })}
-            </nav>
+                    {item.name}
+                  </span>
+                  {isActive ? (
+                    <span className="relative z-10 h-8 w-1.5 rounded-full bg-white/70" />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
 
-            {/* System Status */}
-            <div className="space-y-3 rounded-2xl bg-zinc-50 p-4 text-xs text-zinc-600 shadow-sm dark:bg-zinc-900 dark:text-zinc-300">
+          <div className="mt-4 shrink-0">
+            <div className="space-y-3 rounded-2xl bg-linear-to-br from-purple-50 to-violet-50 p-4 text-xs dark:from-purple-950/30 dark:to-violet-950/30">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-zinc-800 dark:text-zinc-100">
                   {t.systemStatus}
                 </p>
-                <span className="inline-flex items-center gap-1 text-[11px]">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 dark:text-purple-400">
                   <span className={cn("h-2 w-2 rounded-full", statusDotClass)} />
                   {statusLabel}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 text-zinc-600 dark:text-zinc-400">
                 {isStaff ? (
                   <div className="flex items-center justify-between">
                     <span>{t.activeOrganizations}</span>
-                    <span>{statusData.activeOrgs.toLocaleString()}</span>
+                    <span className="font-semibold text-zinc-900 dark:text-white">
+                      {statusData.activeOrgs.toLocaleString()}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <span>{t.platformTotalUsers}</span>
-                    <span>{statusData.adminPlatformUsers.toLocaleString()}</span>
+                    <span className="font-semibold text-zinc-900 dark:text-white">
+                      {statusData.adminPlatformUsers.toLocaleString()}
+                    </span>
                   </div>
                 )}
               </div>
