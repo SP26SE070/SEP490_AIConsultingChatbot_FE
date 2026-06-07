@@ -390,3 +390,47 @@ export async function getAdminSubscriptionById(id: string): Promise<AdminSubscri
   if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load subscription"));
   return res.json();
 }
+
+// ---------- Enterprise Provisioning + Backup (SUPER_ADMIN) ----------
+export interface ProvisionEnterpriseResponse {
+  success: boolean;
+  tenantId: string;
+  databaseName: string;
+  tier: string;
+  newlyCreated: boolean;
+  message: string;
+}
+
+export interface EnterpriseTenantInfo {
+  tenantId: string;
+  datasourceType: string;
+  datasourceUrl: string;
+  isActive: boolean;
+}
+
+export async function listEnterpriseTenants(): Promise<EnterpriseTenantInfo[]> {
+  const res = await fetchWithAuth(`${ADMIN_BASE}/enterprise-tenants`);
+  if (!res.ok) throw new Error(await res.text().catch(() => "Failed to load enterprise tenants"));
+  return res.json();
+}
+
+export async function provisionEnterprise(tenantId: string): Promise<ProvisionEnterpriseResponse> {
+  const res = await fetchWithAuth(`${ADMIN_BASE}/enterprise-tenants/${tenantId}/provision`, {
+    method: "POST",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || data?.message || "Failed to provision enterprise tenant");
+  return data;
+}
+
+export async function backupEnterpriseTenant(tenantId: string): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetchWithAuth(`${ADMIN_BASE}/enterprise-tenants/${tenantId}/backup`);
+  if (!res.ok) {
+    throw new Error(await res.text().catch(() => "Failed to backup tenant"));
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : `tenant_${tenantId}_backup.sql`;
+  return { blob, filename };
+}
