@@ -14,7 +14,7 @@ import {
   updateDocumentAccess,
   softDeleteDocument,
   restoreDocument,
-  downloadDocument,
+  getDocumentDownloadUrl,
   reindexDocument,
   listAccessScopeDepartments,
   listAccessScopeRoles,
@@ -771,15 +771,9 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     setMenuPos(null);
     setError(null);
     try {
-      const file = await downloadDocument(id);
-      const url = URL.createObjectURL(file.blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.filename ?? fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const response = await getDocumentDownloadUrl(id);
+      // Open pre-signed URL in new tab - browser will trigger download
+      window.open(response.url, "_blank");
     } catch (e) {
       setError(e instanceof Error ? e.message : isEn ? "Failed to download document" : "Không tải được tài liệu");
     }
