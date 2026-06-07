@@ -1,10 +1,36 @@
-/**
- * Backend API base URL. Use env in production.
- */
-export const API_BASE_URL =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080")
-    : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const LOCAL_API_BASE_URL = "http://localhost:8080";
+const PRODUCTION_API_BASE_URL =
+  "https://sp26se070internalchatbotbe-production.up.railway.app";
+
+function normalizeApiBaseUrl(value: string): string {
+  return value.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+}
+
+function isLocalApiBaseUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
+export function getApiBaseUrl(): string {
+  const envBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  const isProduction = process.env.NODE_ENV === "production";
+  const baseUrl = envBaseUrl || (isProduction ? PRODUCTION_API_BASE_URL : LOCAL_API_BASE_URL);
+  const normalizedBaseUrl = normalizeApiBaseUrl(baseUrl);
+
+  if (isProduction && isLocalApiBaseUrl(normalizedBaseUrl)) {
+    throw new Error(
+      "NEXT_PUBLIC_API_BASE_URL must not point to localhost in production."
+    );
+  }
+
+  return normalizedBaseUrl;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export const AUTH_BASE = `${API_BASE_URL}/api/v1/auth`;
 export const PROFILE_BASE = `${API_BASE_URL}/api/v1/profile`;

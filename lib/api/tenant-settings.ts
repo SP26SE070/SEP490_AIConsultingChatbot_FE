@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./config";
+import { TENANT_ADMIN_BASE } from "./config";
 
 export interface TenantInfoResponse {
   id: string;
@@ -29,9 +29,9 @@ export async function getTenantInfo(): Promise<TenantInfoResponse> {
     throw new Error("No authentication token found");
   }
 
-  console.log("Fetching tenant info from:", `${API_BASE_URL}/api/v1/tenant-admin/dashboard/tenant`);
+  console.log("Fetching tenant info from:", `${TENANT_ADMIN_BASE}/dashboard/tenant`);
   
-  const response = await fetch(`${API_BASE_URL}/api/v1/tenant-admin/dashboard/tenant`, {
+  const response = await fetch(`${TENANT_ADMIN_BASE}/dashboard/tenant`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -57,7 +57,7 @@ export async function getTenantInfo(): Promise<TenantInfoResponse> {
  */
 export async function updateTenantProfile(data: UpdateTenantProfileRequest): Promise<TenantInfoResponse> {
   const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}/api/v1/tenant-admin/tenant/profile`, {
+  const response = await fetch(`${TENANT_ADMIN_BASE}/tenant/profile`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -86,7 +86,7 @@ export async function uploadTenantLogo(file: File): Promise<{
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/tenant-admin/tenant/logo`, {
+  const response = await fetch(`${TENANT_ADMIN_BASE}/tenant/logo`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -107,7 +107,7 @@ export async function uploadTenantLogo(file: File): Promise<{
  */
 export async function deleteTenantLogo(): Promise<void> {
   const token = localStorage.getItem("token");
-  const response = await fetch(`${API_BASE_URL}/api/v1/tenant-admin/tenant/logo`, {
+  const response = await fetch(`${TENANT_ADMIN_BASE}/tenant/logo`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
