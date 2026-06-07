@@ -1709,14 +1709,26 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
 
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                {language === "en" ? "Preview content" : "Nội dung xem trước"}
+                {language === "en" ? "Extracted content (preview)" : "Nội dung trích xuất (xem trước)"}
               </p>
               {detailLoading ? (
                 <p className="text-sm text-zinc-500">{language === "en" ? "Loading preview..." : "Đang tải preview..."}</p>
               ) : detailPreview?.kind === "text" ? (
-                <pre className="max-h-[45vh] overflow-auto whitespace-pre-wrap break-words text-sm leading-7 text-zinc-800 dark:text-zinc-100">
-                  {detailPreview.text}
-                </pre>
+                <>
+                  <pre className="max-h-[45vh] overflow-auto whitespace-pre-wrap break-words text-sm leading-7 text-zinc-800 dark:text-zinc-100">
+                    {detailPreview.text}
+                  </pre>
+                  <div className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 dark:border-amber-500/20 dark:bg-amber-950/25">
+                    <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200/90">
+                      <span className="font-semibold">
+                        {language === "en" ? "Extracted text used for search/RAG" : "Văn bản dùng cho tìm kiếm/RAG"}
+                      </span> —{" "}
+                      {language === "en"
+                        ? "The original Excel/Word/PDF layout and images are not shown here. Download the file to view the original document."
+                        : "Định dạng gốc của file Excel/Word/PDF không được hiển thị ở đây. Hãy tải xuống để xem file gốc."}
+                    </p>
+                  </div>
+                </>
               ) : detailPreview?.kind === "pdf" ? (
                 <div className="text-sm text-zinc-600 dark:text-zinc-300">
                   <p>{language === "en" ? "Preview is PDF. Open in a new tab to view fully." : "File preview dạng PDF. Mở ở tab mới để xem đầy đủ."}</p>

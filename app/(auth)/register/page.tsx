@@ -37,6 +37,12 @@ export default function RegisterPage() {
     if (!contactEmail.trim()) next.contactEmail = "Vui lòng nhập email liên hệ.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
       next.contactEmail = "Email không đúng định dạng.";
+    } else {
+      const domain = contactEmail.trim().split("@")[1]!;
+      const labels = domain.split(".");
+      if (labels.length >= 2 && labels[labels.length - 1] === labels[labels.length - 2]) {
+        next.contactEmail = "Email không hợp lệ. Vui lòng kiểm tra lại tên miền email.";
+      }
     }
     if (representativePhone.trim() && !/^(0\d{9}|(\+84)\d{9})$/.test(representativePhone.trim().replace(/\s+/g, ""))) {
       next.representativePhone = "Số điện thoại không hợp lệ (0xxxxxxxxx hoặc +84xxxxxxxxx).";

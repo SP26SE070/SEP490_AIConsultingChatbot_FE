@@ -304,7 +304,17 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
       aboutDoc: language === "en" ? "Summary" : "Tóm tắt",
       /** Toàn bộ nội dung từ GET .../content?mode=preview */
       previewContentTitle:
-        language === "en" ? "Document content (preview)" : "Nội dung tài liệu (xem trước)",
+        language === "en" ? "Extracted text content (preview)" : "Nội dung trích xuất (xem trước)",
+      previewTextDisclaimerTitle:
+        language === "en"
+          ? "Extracted text used for search/RAG"
+          : "Văn bản dùng cho tìm kiếm/RAG",
+      previewTextDisclaimerBody:
+        language === "en"
+          ? "The original Excel/Word/PDF layout and images are not shown here. Download the file to view the original document."
+          : "Định dạng gốc của file Excel/Word/PDF không được hiển thị ở đây. Hãy tải xuống để xem file gốc.",
+      downloadOriginalFile:
+        language === "en" ? "Download original file" : "Tải file gốc",
       /** Tóm tắt / mô tả từ GET .../detail/{id} — không thay cho nội dung file */
       summaryFromDetailApi:
         language === "en"
@@ -1301,9 +1311,16 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                     </button>
                   </div>
                 ) : preview?.kind === "text" ? (
-                  <DocumentReadablePanel label={t.previewContentTitle} className="min-h-0 flex-1">
-                    <PreviewPlainText text={preview.text} />
-                  </DocumentReadablePanel>
+                  <>
+                    <DocumentReadablePanel label={t.previewContentTitle} className="min-h-0 flex-1">
+                      <PreviewPlainText text={preview.text} />
+                    </DocumentReadablePanel>
+                    <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 dark:border-amber-500/20 dark:bg-amber-950/25">
+                      <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200/90">
+                        <span className="font-semibold">{t.previewTextDisclaimerTitle}</span> — {t.previewTextDisclaimerBody}
+                      </p>
+                    </div>
+                  </>
                 ) : preview?.kind === "pdf" ? (
                   <div className="flex min-h-0 flex-1 flex-col gap-3">
                     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500 dark:border-zinc-800/80 dark:bg-zinc-900/50 dark:text-zinc-400">
