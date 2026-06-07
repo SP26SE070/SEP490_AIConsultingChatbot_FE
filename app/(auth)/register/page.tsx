@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { AuthHeroPanel } from "@/components/auth/AuthHeroPanel";
 import { ErrorNotice } from "@/components/ui";
+import { AUTH_BASE } from "@/lib/api/config";
 import { toUiErrorMessage } from "@/lib/api/parseApiError";
 
 export default function RegisterPage() {
@@ -78,7 +79,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/auth/register-tenant", {
+      const response = await fetch(`${AUTH_BASE}/register-tenant`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
