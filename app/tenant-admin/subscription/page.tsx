@@ -97,6 +97,9 @@ const PLAN_FEATURES_EN: Record<SubscriptionTier, string[]> = {
   ],
 };
 
+const ENTERPRISE_MODEL_LABEL = "GPT-5.5 Enterprise";
+const ENTERPRISE_MODEL_COPY_PATTERN = /Gemini\s*3\.1\s*Pro|gemini-3\.1-pro|gemini-3\.1|ts\/gemini-3\.1-pro|csu\/pro\/gpt-5\.5/gi;
+
 const pricingFont = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
@@ -178,6 +181,28 @@ function formatAmount(
   return unit === "VND"
     ? `${amount.toLocaleString(locale)}đ`
     : `${amount.toLocaleString(locale)} ${unit}`;
+}
+
+function normalizeEnterpriseModelCopy(value: string): string {
+  return value.replace(ENTERPRISE_MODEL_COPY_PATTERN, ENTERPRISE_MODEL_LABEL);
+}
+
+function getDisplayPlanFeatures(
+  tier: SubscriptionTier,
+  planFeatures: string | undefined,
+  fallbackFeatures: string[]
+): string[] {
+  const parsed = parsePlanFeatures(planFeatures);
+  const features = parsed.length > 0 ? parsed : fallbackFeatures;
+  return tier === "ENTERPRISE" ? features.map(normalizeEnterpriseModelCopy) : features;
+}
+
+function getDisplayPlanDescription(
+  tier: SubscriptionTier,
+  description: string | undefined
+): string | undefined {
+  if (!description) return undefined;
+  return tier === "ENTERPRISE" ? normalizeEnterpriseModelCopy(description) : description;
 }
 
 function formatUsageNumber(value: number | undefined, lang: "vi" | "en"): string {
@@ -351,9 +376,11 @@ export default function TenantAdminSubscriptionPage() {
   const modalPlanData = planModalTier ? planMap.get(planModalTier) : undefined;
   const modalFeatures = useMemo(() => {
     if (!planModalTier) return [] as string[];
-    const parsed = parsePlanFeatures(modalPlanData?.features);
-    if (parsed.length > 0) return parsed;
-    return language === "en" ? PLAN_FEATURES_EN[planModalTier] : PLAN_FEATURES_VI[planModalTier];
+    return getDisplayPlanFeatures(
+      planModalTier,
+      modalPlanData?.features,
+      language === "en" ? PLAN_FEATURES_EN[planModalTier] : PLAN_FEATURES_VI[planModalTier]
+    );
   }, [language, modalPlanData?.features, planModalTier]);
   const modalAmount = planModalTier === "TRIAL" ? 0 : getTierAmount(modalPlanData, modalBillingCycle);
 
@@ -474,7 +501,13 @@ export default function TenantAdminSubscriptionPage() {
   };
 
   const currentPlanData = subscription ? planMap.get(subscription.tier) : undefined;
-  const currentPlanFeatures = parsePlanFeatures(currentPlanData?.features);
+  const currentPlanFeatures = subscription
+    ? getDisplayPlanFeatures(
+        subscription.tier,
+        currentPlanData?.features,
+        language === "en" ? PLAN_FEATURES_EN[subscription.tier] : PLAN_FEATURES_VI[subscription.tier]
+      )
+    : [];
   const isTrialSubscription =
     Boolean(subscription?.isTrial) ||
     subscription?.tier === "TRIAL" ||
@@ -777,10 +810,10 @@ export default function TenantAdminSubscriptionPage() {
                 const isPopular = tier === POPULAR_TIER;
                 const isCurrentPlan = !!(subscription?.tier === tier && hasActiveSubscription);
                 const planData = planMap.get(tier);
-                const apiFeatures = parsePlanFeatures(planData?.features);
                 const fallbackFeatures =
                   language === "en" ? PLAN_FEATURES_EN[tier] : PLAN_FEATURES_VI[tier];
-                const features = apiFeatures.length > 0 ? apiFeatures : fallbackFeatures;
+                const features = getDisplayPlanFeatures(tier, planData?.features, fallbackFeatures);
+                const description = getDisplayPlanDescription(tier, planData?.description);
                 const cycleLabel = language === "en" ? "month" : "tháng";
                 
                 return (
@@ -838,9 +871,9 @@ export default function TenantAdminSubscriptionPage() {
                         </>
                       )}
 
-                      {planData?.description ? (
+                      {description ? (
                         <p className="mt-4 min-h-[48px] text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                          {planData.description}
+                          {description}
                         </p>
                       ) : (
                         <div className="mt-4 min-h-[48px]" />
@@ -1298,6 +1331,7 @@ function PlanCheckoutModal({
   }, [confirmLoading, isClosing, onClose]);
 
   const modalVisible = entered && !isClosing;
+  const description = getDisplayPlanDescription(tier, planData?.description);
 
   const cycleText =
     billingCycle === "YEARLY"
@@ -1371,8 +1405,8 @@ function PlanCheckoutModal({
                 </>
               )}
 
-              {planData?.description && (
-                <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">{planData.description}</p>
+              {description && (
+                <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
               )}
 
               {features.length > 0 && (
