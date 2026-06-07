@@ -26,6 +26,7 @@ import type {
 } from "@/lib/api/subscription";
 import { getStoredUser } from "@/lib/auth-store";
 import { useLanguageStore } from "@/lib/language-store";
+import { getTenantAnalytics, type TenantAnalyticsResponse } from "@/lib/api/tenant-admin";
 import { notifyTenantSubscriptionUpdated } from "@/lib/subscription-sync";
 import { translations } from "@/lib/translations";
 import { toast } from "@/lib/notification-store";
@@ -1070,6 +1071,14 @@ function SubscriptionActivatedModal({
   subscription: MySubscriptionResponse;
   onClose: () => void;
 }) {
+  const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
+
+  useEffect(() => {
+    getTenantAnalytics()
+      .then(setAnalytics)
+      .catch(() => setAnalytics(null));
+  }, []);
+
   const cycleLabel =
     subscription.billingCycle === "YEARLY"
       ? language === "en"
@@ -1126,24 +1135,28 @@ function SubscriptionActivatedModal({
 
           <div>
             <p className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-              {language === "en" ? "Included usage" : "Hạn mức sử dụng"}
+              {language === "en" ? "Current usage" : "Sử dụng hiện tại"}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <UsageCard
-                title={language === "en" ? "Max users" : "Người dùng tối đa"}
-                value={subscription.maxUsers}
+                title={language === "en" ? "Users" : "Người dùng"}
+                current={analytics?.totalUsers}
+                max={subscription.maxUsers}
               />
               <UsageCard
-                title={language === "en" ? "Max documents" : "Tài liệu tối đa"}
-                value={subscription.maxDocuments}
+                title={language === "en" ? "Documents" : "Tài liệu"}
+                current={analytics?.totalDocuments}
+                max={subscription.maxDocuments}
               />
               <UsageCard
-                title={language === "en" ? "Storage limit (GB)" : "Dung lượng lưu trữ (GB)"}
-                value={subscription.maxStorageGb}
+                title={language === "en" ? "Storage (GB)" : "Dung lượng (GB)"}
+                current={analytics?.storageUsedGb != null ? Number(analytics.storageUsedGb.toFixed(1)) : undefined}
+                max={subscription.maxStorageGb}
               />
               <UsageCard
-                title={language === "en" ? "API calls limit" : "Giới hạn API calls"}
-                value={subscription.maxApiCalls}
+                title={language === "en" ? "API calls" : "API calls"}
+                current={undefined}
+                max={subscription.maxApiCalls}
               />
             </div>
           </div>
@@ -1172,12 +1185,26 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function UsageCard({ title, value }: { title: string; value: number | undefined }) {
+function UsageCard({
+  title,
+  current,
+  max,
+}: {
+  title: string;
+  current?: number;
+  max?: number;
+}) {
+  const display =
+    current != null && max != null
+      ? `${current.toLocaleString()} / ${max.toLocaleString()}`
+      : max != null
+        ? `— / ${max.toLocaleString()}`
+        : "—";
   return (
     <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/60 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <p className="text-xs text-zinc-600 dark:text-zinc-400">{title}</p>
       <p className="mt-1 text-xl font-bold text-emerald-700 dark:text-emerald-300">
-        {value == null ? "—" : value.toLocaleString()}
+        {display}
       </p>
     </div>
   );

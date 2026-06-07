@@ -63,6 +63,8 @@ export interface TenantAnalyticsResponse {
   usersByDepartment?: Record<string, number>;
   usersCreatedLast7Days?: number;
   usersCreatedLast30Days?: number;
+  totalDocuments?: number;
+  storageUsedGb?: number;
 }
 
 export interface UserResponse {

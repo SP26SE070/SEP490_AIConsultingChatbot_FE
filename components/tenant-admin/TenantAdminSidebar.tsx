@@ -21,6 +21,7 @@ import {
 import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { getMySubscription, type MySubscriptionResponse } from "@/lib/api/subscription";
+import { getTenantAnalytics, type TenantAnalyticsResponse, getTenantDashboard, type TenantDashboardResponse } from "@/lib/api/tenant-admin";
 import {
   SIDEBAR_SUBSCRIPTION_CACHE_TTL_MS,
   TENANT_SUBSCRIPTION_UPDATED_EVENT,
@@ -53,6 +54,9 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
   const [subscriptionLoading, setSubscriptionLoading] = useState(
     () => !initialSubscriptionCache
   );
+  const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [dashboardFallback, setDashboardFallback] = useState<TenantDashboardResponse | null>(null);
   
   const navigation = [
     { name: t.dashboard, href: "/tenant-admin", icon: LayoutDashboard },
@@ -96,6 +100,30 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
       .finally(() => {
         if (!mounted) return;
         setSubscriptionLoading(false);
+      });
+
+    getTenantAnalytics()
+      .then((data) => {
+        if (!mounted) return;
+        setAnalytics(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setAnalytics(null);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setAnalyticsLoading(false);
+      });
+
+    getTenantDashboard()
+      .then((data) => {
+        if (!mounted) return;
+        setDashboardFallback(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setDashboardFallback(null);
       });
     return () => {
       mounted = false;
@@ -146,14 +174,56 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
       ? tierEn[subscription.tier] ?? subscription.tier
       : tierVi[subscription.tier] ?? subscription.tier
     : "—";
+  const currentUsers = analytics?.totalUsers ?? dashboardFallback?.totalUsers;
+  const maxUsers = subscription?.maxUsers;
+  const currentStorageGb = analytics?.storageUsedGb;
+  const maxStorageGb = subscription?.maxStorageGb;
+
+  const formatUsageValue = (value: number | undefined, decimals = 0) => {
+    if (value == null || Number.isNaN(value)) return "—";
+    if (decimals <= 0) return Math.round(value).toLocaleString(language === "en" ? "en-US" : "vi-VN");
+    const rounded = Number(value.toFixed(decimals));
+    return rounded.toLocaleString(language === "en" ? "en-US" : "vi-VN", {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : decimals,
+      maximumFractionDigits: decimals,
+    });
+  };
+
+  const formatStorageAuto = (value: number | undefined) => {
+    if (value == null || Number.isNaN(value)) return "—";
+    // Input is either:
+    // - GB value from BE (e.g. 0.0057 GB for ~5.8 MB)
+    // - KB value directly (e.g. 5880 KB for ~5.8 MB)
+    // Use magnitude to distinguish:
+    //   < 1        → GB fraction (e.g. 0.0057 → 5.7 MB)
+    //   1 - 1024   → KB value (e.g. 5880 → 5.7 MB)
+    //   >= 1024    → raw bytes (e.g. 6000000 → 5.7 MB)
+    if (value < 1) {
+      // GB fraction → convert to MB
+      return `${Number((value * 1024).toFixed(1))} MB`;
+    }
+    if (value < 1024) {
+      // KB value
+      const mb = value / 1024;
+      if (mb >= 1) return `${Number(mb.toFixed(1))} MB`;
+      return `${Math.round(value)} KB`;
+    }
+    // Raw bytes
+    const gb = value / (1024 * 1024 * 1024);
+    if (gb >= 1) return `${Number(gb.toFixed(1))} GB`;
+    const mb = value / (1024 * 1024);
+    if (mb >= 1) return `${Number(mb.toFixed(1))} MB`;
+    return `${Math.round(value / 1024)} KB`;
+  };
+
   const usersLabel =
-    subscriptionLoading || !subscription
+    !subscription || (currentUsers == null && dashboardFallback?.totalUsers == null)
       ? "—"
-      : `${subscription.maxUsers ?? "—"}`;
+      : `${formatUsageValue(currentUsers ?? dashboardFallback?.totalUsers)} / ${formatUsageValue(maxUsers)}`;
   const storageLabel =
-    subscriptionLoading || !subscription
+    !subscription || currentStorageGb == null
       ? "—"
-      : `${subscription.maxStorageGb ?? "—"} GB`;
+      : `${formatStorageAuto(currentStorageGb)} / ${formatUsageValue(maxStorageGb)} GB`;
 
   return (
     <>
