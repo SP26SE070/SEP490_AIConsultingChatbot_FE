@@ -59,6 +59,8 @@ export interface TenantAnalyticsResponse {
   totalUsers?: number;
   activeUsers?: number;
   newUsersThisMonth?: number;
+  totalDocuments?: number;
+  storageUsedGb?: number;
   usersByRole?: Record<string, number>;
   usersByDepartment?: Record<string, number>;
   usersCreatedLast7Days?: number;

@@ -22,6 +22,12 @@ import { useLanguageStore } from "@/lib/language-store";
 import { translations } from "@/lib/translations";
 import { getMySubscription, type MySubscriptionResponse } from "@/lib/api/subscription";
 import {
+  getTenantAnalytics,
+  getTenantDashboard,
+  type TenantAnalyticsResponse,
+  type TenantDashboardResponse,
+} from "@/lib/api/tenant-admin";
+import {
   SIDEBAR_SUBSCRIPTION_CACHE_TTL_MS,
   TENANT_SUBSCRIPTION_UPDATED_EVENT,
   readSidebarSubscriptionCache,
@@ -53,6 +59,8 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
   const [subscriptionLoading, setSubscriptionLoading] = useState(
     () => !initialSubscriptionCache
   );
+  const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
+  const [dashboardFallback, setDashboardFallback] = useState<TenantDashboardResponse | null>(null);
   
   const navigation = [
     { name: t.dashboard, href: "/tenant-admin", icon: LayoutDashboard },
@@ -96,6 +104,26 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
       .finally(() => {
         if (!mounted) return;
         setSubscriptionLoading(false);
+      });
+
+    getTenantAnalytics()
+      .then((data) => {
+        if (!mounted) return;
+        setAnalytics(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setAnalytics(null);
+      });
+
+    getTenantDashboard()
+      .then((data) => {
+        if (!mounted) return;
+        setDashboardFallback(data);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setDashboardFallback(null);
       });
     return () => {
       mounted = false;
@@ -146,14 +174,45 @@ export function TenantAdminSidebar({ open, setOpen }: TenantAdminSidebarProps) {
       ? tierEn[subscription.tier] ?? subscription.tier
       : tierVi[subscription.tier] ?? subscription.tier
     : "—";
+  const locale = language === "en" ? "en-US" : "vi-VN";
+
+  const formatNumber = (value: number | undefined) => {
+    if (value == null || Number.isNaN(value)) return "—";
+    return Math.round(value).toLocaleString(locale);
+  };
+
+  const isScalableLimit = (value: number | undefined) =>
+    value != null && Number.isFinite(value) && value >= 999999;
+
+  const formatLimit = (value: number | undefined, scalableLabel?: string) => {
+    if (isScalableLimit(value)) return scalableLabel ?? (language === "en" ? "Scalable" : "Linh hoạt");
+    return formatNumber(value);
+  };
+
+  const formatStorageFromGb = (value: number | undefined) => {
+    if (value == null || Number.isNaN(value)) return "—";
+    if (value === 0) return "0 MB";
+    if (value > 0 && value < 1) {
+      const mb = value * 1024;
+      return `${Number(mb.toFixed(mb >= 10 ? 0 : 1)).toLocaleString(locale)} MB`;
+    }
+    const gb = Number(value.toFixed(value >= 10 ? 0 : 1));
+    return `${gb.toLocaleString(locale)} GB`;
+  };
+
+  const currentUsers = analytics?.totalUsers ?? dashboardFallback?.totalUsers;
+  const storageUsedGb = analytics?.storageUsedGb;
+  const maxStorageLabel = isScalableLimit(subscription?.maxStorageGb)
+    ? language === "en" ? "Dedicated VPS" : "Dedicated VPS"
+    : `${formatLimit(subscription?.maxStorageGb)} GB`;
   const usersLabel =
     subscriptionLoading || !subscription
       ? "—"
-      : `${subscription.maxUsers ?? "—"}`;
+      : `${formatNumber(currentUsers)} / ${formatLimit(subscription.maxUsers)}`;
   const storageLabel =
     subscriptionLoading || !subscription
       ? "—"
-      : `${subscription.maxStorageGb ?? "—"} GB`;
+      : `${formatStorageFromGb(storageUsedGb)} / ${maxStorageLabel}`;
 
   return (
     <>

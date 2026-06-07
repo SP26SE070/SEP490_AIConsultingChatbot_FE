@@ -412,7 +412,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
             listCategoriesFlat().catch(() => []),
             listTagsActive().catch(() => []),
           ]);
-          setDocuments(rows);
+          setDocuments(rows.items);
           setCategories(cats);
           setTags(activeTags);
           setDocumentsErrorStatus(null);
@@ -445,7 +445,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                 if (filterToDate) params2.toDate = `${filterToDate}T23:59:59`;
                 
                 const rows2 = await listDocuments(params2);
-                setDocuments(rows2);
+                setDocuments(rows2.items);
                 setDocumentsErrorStatus(null);
                 return;
               } catch (e2: unknown) {

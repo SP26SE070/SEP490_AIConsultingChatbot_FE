@@ -72,7 +72,7 @@ export function KnowledgeBaseView() {
         getTenantActiveDepartments().catch(() => []),
         getTenantRoles().catch(() => []),
       ]);
-      setDocuments(docs);
+      setDocuments(docs.items);
       setCategories(cats);
       setTags(activeTags);
       setDepartments(depts);

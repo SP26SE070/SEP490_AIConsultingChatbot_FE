@@ -354,6 +354,21 @@ export interface ListDocumentsParams {
   status?: string;
   fromDate?: string;
   toDate?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface ListDocumentsResult {
+  items: DocumentResponse[];
+  totalElements: number;
+  totalPages: number;
+  page: number;
+  size: number;
+}
+
+function numberOrFallback(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
 export interface DocumentPermissionProbeResult {
@@ -409,7 +424,7 @@ export async function probeDocumentPermissions(): Promise<DocumentPermissionProb
   return { canRead, canWrite, canDelete };
 }
 
-export async function listDocuments(params?: ListDocumentsParams): Promise<DocumentResponse[]> {
+export async function listDocuments(params?: ListDocumentsParams): Promise<ListDocumentsResult> {
   let url = DOCUMENTS_BASE;
   
   if (params) {
@@ -422,6 +437,8 @@ export async function listDocuments(params?: ListDocumentsParams): Promise<Docum
     if (params.status) searchParams.append('status', params.status);
     if (params.fromDate) searchParams.append('fromDate', params.fromDate);
     if (params.toDate) searchParams.append('toDate', params.toDate);
+    if (params.page != null) searchParams.append('page', String(params.page));
+    if (params.size != null) searchParams.append('size', String(params.size));
     
     const queryString = searchParams.toString();
     if (queryString) url += `?${queryString}`;
@@ -430,13 +447,39 @@ export async function listDocuments(params?: ListDocumentsParams): Promise<Docum
   const res = await fetchWithAuth(url);
   if (!res.ok) throw apiError(res, await res.text().catch(() => "Failed to list documents"));
   const data: unknown = await res.json();
-  if (Array.isArray(data)) return data as DocumentResponse[];
+  const fallbackPage = params?.page ?? 0;
+  const fallbackSize = params?.size ?? 10;
+  if (Array.isArray(data)) {
+    const items = data as DocumentResponse[];
+    return {
+      items,
+      totalElements: items.length,
+      totalPages: Math.max(1, Math.ceil(items.length / fallbackSize)),
+      page: fallbackPage,
+      size: fallbackSize,
+    };
+  }
   if (data && typeof data === "object") {
     const o = data as Record<string, unknown>;
-    if (Array.isArray(o.content)) return o.content as DocumentResponse[];
-    if (Array.isArray(o.data)) return o.data as DocumentResponse[];
+    const rawItems = Array.isArray(o.content)
+      ? o.content
+      : Array.isArray(o.data)
+        ? o.data
+        : Array.isArray(o.items)
+          ? o.items
+          : [];
+    const items = rawItems as DocumentResponse[];
+    const size = numberOrFallback(o.size, fallbackSize || items.length || 10);
+    const totalElements = numberOrFallback(o.totalElements ?? o.total, items.length);
+    return {
+      items,
+      totalElements,
+      totalPages: Math.max(1, numberOrFallback(o.totalPages, Math.ceil(totalElements / Math.max(size, 1)))),
+      page: numberOrFallback(o.number ?? o.page, fallbackPage),
+      size,
+    };
   }
-  return [];
+  return { items: [], totalElements: 0, totalPages: 1, page: fallbackPage, size: fallbackSize };
 }
 
 export async function listAccessScopeDepartments(): Promise<AccessScopeDepartment[]> {

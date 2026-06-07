@@ -248,8 +248,8 @@ export default function DocumentDashboardPage() {
         normalized.includes("đã tồn tại") ||
         normalized.includes("trùng");
       if (isDuplicate) {
-        const docs = await listDocuments().catch(() => []);
-        const matched = docs.find((doc) => {
+        const docs = await listDocuments().catch(() => ({ items: [] }));
+        const matched = docs.items.find((doc) => {
           const title = (doc.documentTitle ?? "").trim().toLowerCase();
           const original = (doc.originalFileName ?? "").trim().toLowerCase();
           const fileName = data.file.name.trim().toLowerCase();

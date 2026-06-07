@@ -29,6 +29,7 @@ import { useLanguageStore } from "@/lib/language-store";
 import { notifyTenantSubscriptionUpdated } from "@/lib/subscription-sync";
 import { translations } from "@/lib/translations";
 import { toast } from "@/lib/notification-store";
+import { getTenantAnalytics, type TenantAnalyticsResponse } from "@/lib/api/tenant-admin";
 
 type TabId = "plans" | "history" | "upcoming";
 
@@ -179,6 +180,37 @@ function formatAmount(
     : `${amount.toLocaleString(locale)} ${unit}`;
 }
 
+function formatUsageNumber(value: number | undefined, lang: "vi" | "en"): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return Math.round(value).toLocaleString(lang === "en" ? "en-US" : "vi-VN");
+}
+
+function isScalableLimit(value: number | undefined): boolean {
+  return value != null && Number.isFinite(value) && value >= 999999;
+}
+
+function formatLimitValue(value: number | undefined, lang: "vi" | "en"): string {
+  if (isScalableLimit(value)) return lang === "en" ? "Scalable" : "Linh hoạt";
+  return formatUsageNumber(value, lang);
+}
+
+function formatStorageFromGb(value: number | undefined, lang: "vi" | "en"): string {
+  const locale = lang === "en" ? "en-US" : "vi-VN";
+  if (value == null || Number.isNaN(value)) return "—";
+  if (value === 0) return "0 MB";
+  if (value > 0 && value < 1) {
+    const mb = value * 1024;
+    return `${Number(mb.toFixed(mb >= 10 ? 0 : 1)).toLocaleString(locale)} MB`;
+  }
+  const gb = Number(value.toFixed(value >= 10 ? 0 : 1));
+  return `${gb.toLocaleString(locale)} GB`;
+}
+
+function formatStorageLimit(value: number | undefined, lang: "vi" | "en"): string {
+  if (isScalableLimit(value)) return "Dedicated VPS";
+  return `${formatLimitValue(value, lang)} GB`;
+}
+
 function formatDate(dateStr: string | undefined, lang: "vi" | "en"): string {
   if (!dateStr) return "—";
   try {
@@ -237,6 +269,7 @@ export default function TenantAdminSubscriptionPage() {
   const [upcomingReminderMessage, setUpcomingReminderMessage] = useState<string | null>(null);
   const [showUpcomingPaymentQr, setShowUpcomingPaymentQr] = useState(false);
   const [successActivatedSubscription, setSuccessActivatedSubscription] = useState<MySubscriptionResponse | null>(null);
+  const [tenantAnalytics, setTenantAnalytics] = useState<TenantAnalyticsResponse | null>(null);
   const { language } = useLanguageStore();
   const t = translations[language];
 
@@ -276,6 +309,12 @@ export default function TenantAdminSubscriptionPage() {
       .then(setPayments)
       .catch(() => setPayments([]))
       .finally(() => setPaymentsLoading(false));
+  }, []);
+
+  const loadTenantAnalytics = useCallback(() => {
+    getTenantAnalytics()
+      .then(setTenantAnalytics)
+      .catch(() => setTenantAnalytics(null));
   }, []);
 
   const sortedPlans = useMemo(
@@ -321,7 +360,8 @@ export default function TenantAdminSubscriptionPage() {
   useEffect(() => {
     void loadSubscription();
     loadAvailablePlans();
-  }, [loadAvailablePlans, loadSubscription]);
+    loadTenantAnalytics();
+  }, [loadAvailablePlans, loadSubscription, loadTenantAnalytics]);
 
   useEffect(() => {
     if (activeTab === "history") loadPayments();
@@ -350,6 +390,7 @@ export default function TenantAdminSubscriptionPage() {
   const handleSubscriptionUpdated = async (options?: { showSuccessPopup?: boolean }) => {
     const latestSubscription = await loadSubscription({ silent: true });
     loadAvailablePlans();
+    loadTenantAnalytics();
     setPaymentPending(undefined);
     setShowUpcomingPaymentQr(false);
     setUpcomingReminderMessage(null);
@@ -640,6 +681,25 @@ export default function TenantAdminSubscriptionPage() {
 
               {/* Billing Info & Actions */}
               <div className="space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                  <p className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                    {language === "en" ? "Current usage" : "Sử dụng hiện tại"}
+                  </p>
+                  <div className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                    <InfoRow
+                      label={language === "en" ? "Users" : "Người dùng"}
+                      value={`${formatUsageNumber(tenantAnalytics?.totalUsers, language === "en" ? "en" : "vi")} / ${formatLimitValue(subscription.maxUsers, language === "en" ? "en" : "vi")}`}
+                    />
+                    <InfoRow
+                      label={language === "en" ? "Documents" : "Tài liệu"}
+                      value={`${formatUsageNumber(tenantAnalytics?.totalDocuments, language === "en" ? "en" : "vi")} / ${formatLimitValue(subscription.maxDocuments, language === "en" ? "en" : "vi")}`}
+                    />
+                    <InfoRow
+                      label={language === "en" ? "Storage" : "Dung lượng"}
+                      value={`${formatStorageFromGb(tenantAnalytics?.storageUsedGb, language === "en" ? "en" : "vi")} / ${formatStorageLimit(subscription.maxStorageGb, language === "en" ? "en" : "vi")}`}
+                    />
+                  </div>
+                </div>
                 <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950">
                   <p className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                     {language === "en" ? "Billing Information" : "Thông tin thanh toán"}
@@ -1070,6 +1130,14 @@ function SubscriptionActivatedModal({
   subscription: MySubscriptionResponse;
   onClose: () => void;
 }) {
+  const [analytics, setAnalytics] = useState<TenantAnalyticsResponse | null>(null);
+
+  useEffect(() => {
+    getTenantAnalytics()
+      .then(setAnalytics)
+      .catch(() => setAnalytics(null));
+  }, []);
+
   const cycleLabel =
     subscription.billingCycle === "YEARLY"
       ? language === "en"
@@ -1126,24 +1194,24 @@ function SubscriptionActivatedModal({
 
           <div>
             <p className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-              {language === "en" ? "Included usage" : "Hạn mức sử dụng"}
+              {language === "en" ? "Current usage" : "Sử dụng hiện tại"}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <UsageCard
-                title={language === "en" ? "Max users" : "Người dùng tối đa"}
-                value={subscription.maxUsers}
+                title={language === "en" ? "Users" : "Người dùng"}
+                value={`${formatUsageNumber(analytics?.totalUsers, language)} / ${formatLimitValue(subscription.maxUsers, language)}`}
               />
               <UsageCard
-                title={language === "en" ? "Max documents" : "Tài liệu tối đa"}
-                value={subscription.maxDocuments}
+                title={language === "en" ? "Documents" : "Tài liệu"}
+                value={`${formatUsageNumber(analytics?.totalDocuments, language)} / ${formatLimitValue(subscription.maxDocuments, language)}`}
               />
               <UsageCard
-                title={language === "en" ? "Storage limit (GB)" : "Dung lượng lưu trữ (GB)"}
-                value={subscription.maxStorageGb}
+                title={language === "en" ? "Storage" : "Dung lượng"}
+                value={`${formatStorageFromGb(analytics?.storageUsedGb, language)} / ${formatStorageLimit(subscription.maxStorageGb, language)}`}
               />
               <UsageCard
-                title={language === "en" ? "API calls limit" : "Giới hạn API calls"}
-                value={subscription.maxApiCalls}
+                title={language === "en" ? "API calls" : "API calls"}
+                value={`— / ${formatLimitValue(subscription.maxApiCalls, language)}`}
               />
             </div>
           </div>
@@ -1172,12 +1240,12 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function UsageCard({ title, value }: { title: string; value: number | undefined }) {
+function UsageCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/60 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
       <p className="text-xs text-zinc-600 dark:text-zinc-400">{title}</p>
       <p className="mt-1 text-xl font-bold text-emerald-700 dark:text-emerald-300">
-        {value == null ? "—" : value.toLocaleString()}
+        {value}
       </p>
     </div>
   );

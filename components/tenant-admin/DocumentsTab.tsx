@@ -21,6 +21,7 @@ import {
   type UploadDocumentParams,
   type DocumentPreviewResponse,
   type ListDocumentsParams,
+  type ListDocumentsResult,
 } from "@/lib/api/documents";
 import { documentUploadAccessHint } from "@/lib/role-levels";
 import type {
@@ -261,6 +262,14 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
   const [embeddingProgress, setEmbeddingProgress] = useState(10);
   const [embeddingCompletedAtByDocId, setEmbeddingCompletedAtByDocId] = useState<Record<string, string>>({});
   const previousEmbeddingStateRef = useRef<Record<string, EmbeddingState>>({});
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({
+    totalElements: 0,
+    totalPages: 1,
+    page: 0,
+    size: 10,
+  });
   
   // Menu states
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -384,9 +393,11 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
       // Convert date to LocalDateTime format (ISO 8601 with time)
       if (filters.filterFromDate) params.fromDate = `${filters.filterFromDate}T00:00:00`;
       if (filters.filterToDate) params.toDate = `${filters.filterToDate}T23:59:59`;
-      const docsPromise: Promise<DocumentResponse[]> = shouldLoadLibrary
+      params.page = currentPage;
+      params.size = pageSize;
+      const docsPromise: Promise<ListDocumentsResult> = shouldLoadLibrary
         ? listDocuments(params)
-        : Promise.resolve([]);
+        : Promise.resolve({ items: [], totalElements: 0, totalPages: 1, page: 0, size: pageSize });
       const deletedPromise: Promise<DeletedDocumentResponse[]> = shouldLoadLibrary
         ? listDeletedDocuments()
         : Promise.resolve([]);
@@ -401,10 +412,17 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
       ]);
 
       if (shouldLoadLibrary) {
-        setDocuments(docs);
-        updateEmbeddingCompletionTimestamps(docs);
+        setDocuments(docs.items);
+        setPagination({
+          totalElements: docs.totalElements,
+          totalPages: docs.totalPages,
+          page: docs.page,
+          size: docs.size,
+        });
+        updateEmbeddingCompletionTimestamps(docs.items);
       } else {
         setDocuments([]);
+        setPagination({ totalElements: 0, totalPages: 1, page: 0, size: pageSize });
         updateEmbeddingCompletionTimestamps([]);
       }
 
@@ -423,10 +441,11 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     } finally {
       setLoading(false);
     }
-  }, [updateEmbeddingCompletionTimestamps, isEn, shouldLoadLibrary]);
+  }, [currentPage, pageSize, updateEmbeddingCompletionTimestamps, isEn, shouldLoadLibrary]);
 
   const applySearchKeyword = useCallback(() => {
     const nextKeyword = searchKeywordInput.trim();
+    setCurrentPage(0);
     setSearchKeyword(nextKeyword);
     currentFiltersRef.current = {
       ...currentFiltersRef.current,
@@ -434,6 +453,10 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
     };
     void load();
   }, [searchKeywordInput, load]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filterCategoryId, filterTagIds, filterStatus, filterFromDate, filterToDate]);
 
   const isWarningError = !!error && isDocumentLimitWarning(error);
 
@@ -1324,6 +1347,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
                   setFilterStatus("");
                   setFilterFromDate("");
                   setFilterToDate("");
+                  setCurrentPage(0);
                   void load();
                 }}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -1346,7 +1370,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
 
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          {t.documentList} ({documents.length})
+          {t.documentList} ({pagination.totalElements})
         </h3>
         <button
           type="button"
@@ -1395,6 +1419,7 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
           )}
         </div>
       ) : (
+        <>
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <table className="min-w-full">
             <thead>
@@ -1503,8 +1528,55 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
             </div>
           )}
         </div>
+        {documents.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+              <span>
+                {isEn ? "Page" : "Trang"} {pagination.page + 1} / {pagination.totalPages}
+              </span>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <span>
+                {pagination.totalElements.toLocaleString(language === "en" ? "en-US" : "vi-VN")} {isEn ? "documents" : "tài liệu"}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-zinc-600 dark:text-zinc-400">
+                {isEn ? "Page size" : "Số dòng"}
+              </label>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(0);
+                }}
+                className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              >
+                {[10, 20, 50].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+                disabled={pagination.page <= 0}
+                className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {isEn ? "Previous" : "Trước"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(pagination.totalPages - 1, page + 1))}
+                disabled={pagination.page >= pagination.totalPages - 1}
+                className="rounded-lg border border-zinc-300 px-3 py-1.5 font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                {isEn ? "Next" : "Sau"}
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
-      
+       
       {/* Dropdown Menu */}
       {openMenuId && menuPos && typeof document !== "undefined"
         ? createPortal(
