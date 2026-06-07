@@ -14,7 +14,6 @@ import {
   updateDocumentAccess,
   softDeleteDocument,
   restoreDocument,
-  downloadDocument,
   getDocumentDownloadUrl,
   reindexDocument,
   listAccessScopeDepartments,
@@ -212,6 +211,18 @@ function canPerformDocumentAction(params: {
   if (!canEditDocuments) return false;
   if (isTenantAdmin) return true;
   return isOwner;
+}
+
+function isSpreadsheetFile(fileType?: string | null, originalFileName?: string | null): boolean {
+  const normalizedType = (fileType ?? "").toLowerCase();
+  const normalizedName = (originalFileName ?? "").toLowerCase();
+  return (
+    normalizedType.includes("spreadsheet") ||
+    normalizedType.includes("excel") ||
+    normalizedType.includes("officedocument.spreadsheetml") ||
+    normalizedName.endsWith(".xls") ||
+    normalizedName.endsWith(".xlsx")
+  );
 }
 
 export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?: "all" | "upload" | "library"; hideEditActions?: boolean }) {
@@ -1713,6 +1724,22 @@ export function DocumentsTab({ mode = "all", hideEditActions = false }: { mode?:
               </p>
               {detailLoading ? (
                 <p className="text-sm text-zinc-500">{language === "en" ? "Loading preview..." : "Đang tải preview..."}</p>
+              ) : detailPreview?.kind === "text" && isSpreadsheetFile(detailDoc.fileType, detailDoc.originalFileName) ? (
+                <div className="rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-4 dark:border-amber-500/20 dark:bg-amber-950/25">
+                  <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-100/90">
+                    {language === "en"
+                      ? "Excel visual preview is not shown; download/open the original to view the exact workbook. RAG uses extracted text internally."
+                      : "Không hiển thị preview trực quan cho Excel; hãy tải/mở file gốc để xem đúng workbook. RAG sử dụng văn bản trích xuất nội bộ."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void handleDownload(detailDoc.id, detailDoc.originalFileName)}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {language === "en" ? "Download original" : "Tải file gốc"}
+                  </button>
+                </div>
               ) : detailPreview?.kind === "text" ? (
                 <>
                   <pre className="max-h-[45vh] overflow-auto whitespace-pre-wrap break-words text-sm leading-7 text-zinc-800 dark:text-zinc-100">

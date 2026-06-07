@@ -12,6 +12,8 @@ import {
   type AdminTenantSummary,
 } from "@/lib/api/admin";
 
+const enterpriseBackupEnabled = process.env.NEXT_PUBLIC_ENABLE_ENTERPRISE_BACKUP === "true";
+
 export function OrganizationsTable() {
   const { language } = useLanguageStore();
   const isEn = language === "en";
@@ -69,6 +71,16 @@ export function OrganizationsTable() {
   };
 
   const handleBackup = async (tenantId: string, name: string) => {
+    if (!enterpriseBackupEnabled) {
+      setFeedback({
+        type: "error",
+        text: isEn
+          ? "SQL export is available only in the admin/VPS backup environment."
+          : "SQL export chỉ khả dụng trong môi trường admin/VPS backup.",
+      });
+      return;
+    }
+
     setActionState({ tenantId, action: "backup" });
     setFeedback(null);
     try {
@@ -214,7 +226,7 @@ export function OrganizationsTable() {
                             {isEn ? "Provision Enterprise" : "Cấp phát Enterprise"}
                           </button>
                         )}
-                        {isEnterprise ? (
+                        {isEnterprise && enterpriseBackupEnabled ? (
                           <button
                             onClick={() => handleBackup(org.id, org.name)}
                             disabled={anyActionOnRow}
@@ -223,6 +235,19 @@ export function OrganizationsTable() {
                             {isBackingUp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                             {isEn ? "Backup" : "Sao lưu"}
                           </button>
+                        ) : isEnterprise ? (
+                          <span
+                            className="inline-flex max-w-64 items-center rounded-full border border-amber-300/80 bg-amber-50 px-3 py-1.5 text-[10px] font-semibold leading-snug text-amber-700 dark:border-amber-500/30 dark:bg-amber-950/25 dark:text-amber-200"
+                            title={
+                              isEn
+                                ? "SQL export is available only in the admin/VPS backup environment."
+                                : "SQL export chỉ khả dụng trong môi trường admin/VPS backup."
+                            }
+                          >
+                            {isEn
+                              ? "SQL export: admin/VPS backup only"
+                              : "SQL export: chỉ admin/VPS backup"}
+                          </span>
                         ) : null}
                       </div>
                     </td>

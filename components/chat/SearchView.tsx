@@ -174,6 +174,18 @@ function getErrorTraceId(error: unknown): string | null {
   return typeof traceId === "string" && traceId.trim().length > 0 ? traceId.trim() : null;
 }
 
+function isSpreadsheetFile(fileType?: string | null, originalFileName?: string | null): boolean {
+  const normalizedType = (fileType ?? "").toLowerCase();
+  const normalizedName = (originalFileName ?? "").toLowerCase();
+  return (
+    normalizedType.includes("spreadsheet") ||
+    normalizedType.includes("excel") ||
+    normalizedType.includes("officedocument.spreadsheetml") ||
+    normalizedName.endsWith(".xls") ||
+    normalizedName.endsWith(".xlsx")
+  );
+}
+
 export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProps) {
   const router = useRouter();
   const { language } = useLanguageStore();
@@ -497,6 +509,7 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
   }, [selected?.id]);
 
   const displayDoc = detailDoc ?? selected;
+  const isSelectedSpreadsheet = isSpreadsheetFile(displayDoc?.fileType, displayDoc?.originalFileName);
 
   const filtered = useMemo(() => {
     const raw = query.trim().toLowerCase();
@@ -1305,6 +1318,24 @@ export function SearchView({ initialQuery, permissionTabs = [] }: SearchViewProp
                       disabled={actionLoading}
                       onClick={() => void handleDownload(displayDoc ?? selected)}
                       className="mt-3 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                    >
+                      {actionLoading ? <ChatbotSpinner size="xs" tone="inverse" /> : <Download className="h-3.5 w-3.5" />}
+                      {t.download}
+                    </button>
+                  </div>
+                ) : preview?.kind === "text" && isSelectedSpreadsheet ? (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-12 text-center dark:border-amber-500/25 dark:bg-amber-950/25">
+                    <FileType className="h-10 w-10 text-amber-500" />
+                    <p className="max-w-md text-sm leading-relaxed text-amber-800 dark:text-amber-100/90">
+                      {language === "en"
+                        ? "Excel visual preview is not shown; download/open the original to view the exact workbook. RAG uses extracted text internally."
+                        : "Không hiển thị preview trực quan cho Excel; hãy tải/mở file gốc để xem đúng workbook. RAG sử dụng văn bản trích xuất nội bộ."}
+                    </p>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => void handleDownload(displayDoc ?? selected)}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                     >
                       {actionLoading ? <ChatbotSpinner size="xs" tone="inverse" /> : <Download className="h-3.5 w-3.5" />}
                       {t.download}
